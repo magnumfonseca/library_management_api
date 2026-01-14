@@ -6,7 +6,7 @@ class User < ApplicationRecord
          :jwt_authenticatable, jwt_revocation_strategy: self
 
   # Enums
-  enum role: { member: 'member', librarian: 'librarian' }
+  enum role: { member: "member", librarian: "librarian" }
 
   # Validations
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
@@ -18,11 +18,11 @@ class User < ApplicationRecord
   before_create :assign_jti
 
   # Scopes
-  scope :members, -> { where(role: 'member') }
-  scope :librarians, -> { where(role: 'librarian') }
+  scope :members, -> { where(role: "member") }
+  scope :librarians, -> { where(role: "librarian") }
 
   def jwt_payload
-    { 'role' => role }
+    { "role" => role }
   end
 
   def revoke_jwt
