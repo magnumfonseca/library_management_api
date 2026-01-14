@@ -1,4 +1,7 @@
 class Book < ApplicationRecord
+  # Associations
+  has_many :borrowings, dependent: :destroy
+
   # Validations
   validates :title, presence: true
   validates :author, presence: true
@@ -9,4 +12,27 @@ class Book < ApplicationRecord
   # Scopes
   scope :by_genre, ->(genre) { where(genre: genre) }
   scope :by_author, ->(author) { where("author ILIKE ?", "%#{author}%") }
+  scope :available, -> {
+      left_joins(:borrowings)
+        .where(borrowings: { returned_at: nil })
+        .group("books.id")
+        .having("books.total_copies > COUNT(borrowings.id)")
+    }
+
+  # Business logic
+  def active_borrowings_count
+    borrowings.active.count
+  end
+
+  def available_copies
+    total_copies - active_borrowings_count
+  end
+
+  def available?
+    available_copies > 0
+  end
+
+  def borrowed_by?(user)
+    borrowings.active.exists?(user: user)
+  end
 end
