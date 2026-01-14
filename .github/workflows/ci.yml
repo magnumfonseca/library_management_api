@@ -52,6 +52,8 @@ jobs:
 
     env:
       RAILS_ENV: test
+      DEVISE_JWT_SECRET_KEY: ${{ secrets.DEVISE_JWT_SECRET_KEY }}
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/library_management_test
 
     steps:
