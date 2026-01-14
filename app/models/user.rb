@@ -6,7 +6,10 @@ class User < ApplicationRecord
          :jwt_authenticatable, jwt_revocation_strategy: self
 
   # Enums
-  enum role: { member: "member", librarian: "librarian" }
+  enum :role, { member: "member", librarian: "librarian" }
+
+  # Associations
+  has_many :borrowings, dependent: :destroy
 
   # Validations
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
@@ -16,10 +19,6 @@ class User < ApplicationRecord
 
   # Callbacks
   before_create :assign_jti
-
-  # Scopes
-  scope :members, -> { where(role: "member") }
-  scope :librarians, -> { where(role: "librarian") }
 
   def jwt_payload
     { "role" => role }
@@ -31,6 +30,23 @@ class User < ApplicationRecord
 
   def as_json(options = {})
     super(options.merge(only: %i[id email name role]))
+  end
+
+  # Business logic methods
+  def can_borrow_book?(book)
+    member? && !has_active_borrowing_for?(book)
+  end
+
+  def has_active_borrowing_for?(book)
+    borrowings.active.exists?(book: book)
+  end
+
+  def overdue_borrowings
+    borrowings.overdue
+  end
+
+  def active_borrowings_count
+    borrowings.active.count
   end
 
   private
