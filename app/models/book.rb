@@ -13,10 +13,11 @@ class Book < ApplicationRecord
   scope :by_genre, ->(genre) { where(genre: genre) }
   scope :by_author, ->(author) { where("author ILIKE ?", "%#{author}%") }
   scope :available, -> {
-      left_joins(:borrowings)
-        .where(borrowings: { returned_at: nil })
-        .group("books.id")
-        .having("books.total_copies > COUNT(borrowings.id)")
+    where("total_copies > ?", 0)
+      .joins("LEFT JOIN borrowings ON books.id = borrowings.book_id AND borrowings.returned_at IS NULL")
+      .select("books.*, COUNT(borrowings.id) as active_count")
+      .group("books.id")
+      .having("books.total_copies > COUNT(borrowings.id)")
     }
 
   # Business logic

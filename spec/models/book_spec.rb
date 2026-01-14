@@ -37,6 +37,33 @@ RSpec.describe Book, type: :model do
       end
     end
 
+    describe '.available' do
+      let!(:book_no_borrows) { create(:book, total_copies: 1) }
+      let!(:book_all_returned) do
+        b = create(:book, total_copies: 1)
+        create(:borrowing, book: b, returned_at: 1.day.ago)
+        b
+      end
+      let!(:book_active) do
+        b = create(:book, total_copies: 1)
+        create(:borrowing, book: b, returned_at: nil)
+        b
+      end
+
+      it 'includes books with no borrowings' do
+        expect(Book.available).to include(book_no_borrows)
+      end
+
+      it 'includes books whose borrowings are all returned' do
+        expect(Book.available).to include(book_all_returned)
+      end
+
+      it 'excludes books fully borrowed' do
+        expect(Book.available).not_to include(book_active)
+      end
+    end
+
+
     describe "#available_copies" do
       it "calculates available copies correctly" do
         book = create(:book, total_copies: 5)

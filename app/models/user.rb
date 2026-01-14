@@ -6,7 +6,7 @@ class User < ApplicationRecord
          :jwt_authenticatable, jwt_revocation_strategy: self
 
   # Enums
-  enum role: { member: "member", librarian: "librarian" }
+  enum :role, { member: "member", librarian: "librarian" }
 
   # Associations
   has_many :borrowings, dependent: :destroy
@@ -34,9 +34,7 @@ class User < ApplicationRecord
 
   # Business logic methods
   def can_borrow_book?(book)
-    return false unless member?
-
-    !has_active_borrowing_for?(book)
+    member? && !has_active_borrowing_for?(book)
   end
 
   def has_active_borrowing_for?(book)

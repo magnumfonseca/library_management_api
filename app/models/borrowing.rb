@@ -18,7 +18,6 @@ class Borrowing < ApplicationRecord
               message: "You already have an active borrowing for this book"
             }
 
-
   # Callbacks
   before_validation :set_dates, on: :create
 
@@ -26,9 +25,7 @@ class Borrowing < ApplicationRecord
   scope :active, -> { where(returned_at: nil) }
   scope :returned, -> { where.not(returned_at: nil) }
   scope :overdue, -> { active.where("due_date < ?", Time.current) }
-  scope :due_today, -> {
-    active.where(due_date: Time.current.beginning_of_day..Time.current.end_of_day)
-  }
+  scope :due_today, -> { active.where(due_date: Time.current.beginning_of_day..Time.current.end_of_day) }
   scope :due_soon, -> { active.where(due_date: Time.current..CLOSE_DATE_THRESHOLD_DAYS.days.from_now) }
 
   # Business logic
@@ -37,7 +34,7 @@ class Borrowing < ApplicationRecord
   end
 
   def returned?
-    !returned_at.nil?
+    returned_at.present?
   end
 
   def overdue?
