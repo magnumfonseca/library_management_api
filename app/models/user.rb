@@ -28,10 +28,6 @@ class User < ApplicationRecord
     update!(jti: SecureRandom.uuid)
   end
 
-  def as_json(options = {})
-    super(options.merge(only: %i[id email name role]))
-  end
-
   # Business logic methods
   def can_borrow_book?(book)
     member? && !has_active_borrowing_for?(book)

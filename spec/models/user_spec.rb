@@ -78,27 +78,6 @@ RSpec.describe User, type: :model do
     end
   end
 
-  describe "#as_json" do
-    let(:user) { create(:user, name: "John Doe", email: "john@example.com", role: :librarian) }
-
-    it "returns the expected attributes" do
-      json = user.as_json
-
-      expect(json).to include(
-        "id" => user.id,
-        "email" => "john@example.com",
-        "name" => "John Doe",
-        "role" => "librarian"
-      )
-    end
-
-    it "excludes sensitive attributes" do
-      json = user.as_json
-
-      expect(json.keys).not_to include("encrypted_password", "jti")
-    end
-  end
-
   describe "business logic methods" do
     describe "#can_borrow_book?" do
       it "returns true if user is a member and has no active borrowing for the book" do
