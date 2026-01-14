@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 class InvitationSerializer
-  def initialize(invitation)
+  def initialize(invitation, include_token: false)
     @invitation = invitation
+    @include_token = include_token
   end
 
   def as_jsonapi
@@ -13,7 +14,7 @@ class InvitationSerializer
         attributes: {
           email: @invitation.email,
           role: @invitation.role,
-          token: @invitation.token,
+          token: @include_token ? @invitation.token : nil,
           expires_at: @invitation.expires_at,
           accepted_at: @invitation.accepted_at
         },

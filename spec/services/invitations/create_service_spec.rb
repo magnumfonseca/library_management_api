@@ -83,7 +83,7 @@ RSpec.describe Invitations::CreateService do
         ).call
 
         expect(response).to be_failure
-        expect(response.http_status).to eq(:unprocessable_entity)
+        expect(response.http_status).to eq(:unprocessable_content)
         expect(response.errors).to include("A user with this email already exists.")
       end
     end
@@ -98,7 +98,7 @@ RSpec.describe Invitations::CreateService do
         ).call
 
         expect(response).to be_failure
-        expect(response.http_status).to eq(:unprocessable_entity)
+        expect(response.http_status).to eq(:unprocessable_content)
         expect(response.errors).to include("An invitation for this email is already pending.")
       end
     end

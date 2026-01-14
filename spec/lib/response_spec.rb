@@ -56,10 +56,10 @@ RSpec.describe Response do
       expect(response.meta).to eq({ code: "E001" })
     end
 
-    it "sets http_status to :unprocessable_entity by default" do
+    it "sets http_status to :unprocessable_content by default" do
       response = described_class.failure("Error")
 
-      expect(response.http_status).to eq(:unprocessable_entity)
+      expect(response.http_status).to eq(:unprocessable_content)
     end
 
     it "allows custom http_status" do

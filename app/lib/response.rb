@@ -18,7 +18,7 @@ class Response
     new(status: SUCCESS, data: data, meta: meta, http_status: :ok)
   end
 
-  def self.failure(errors, http_status: :unprocessable_entity, meta: {})
+  def self.failure(errors, http_status: :unprocessable_content, meta: {})
     errors = [ errors ] unless errors.is_a?(Array)
     new(status: FAILURE, errors: errors, meta: meta, http_status: http_status)
   end

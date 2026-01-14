@@ -14,7 +14,8 @@ module Api
         ).call
 
         if response.success?
-          render_service_success(response, serializer: InvitationSerializer, status: :created)
+          render_service_success(response, serializer: InvitationSerializer,
+                                serializer_options: { include_token: true }, status: :created)
         else
           render_service_failure(response)
         end
@@ -37,7 +38,7 @@ module Api
       private
 
       def invitation_params
-        params.require(:invitation).permit(:email, :role)
+        params.require(:invitation).permit(:email)
       end
 
       def accept_params

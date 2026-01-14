@@ -57,7 +57,7 @@ RSpec.describe "Authentication", type: :request do
 
         post "/api/v1/signup", params: invalid_params, as: :json
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json_response).to have_key("errors")
         expect(json_response["errors"].first["status"]).to eq("422")
       end
@@ -69,7 +69,7 @@ RSpec.describe "Authentication", type: :request do
 
         post "/api/v1/signup", params: invalid_params, as: :json
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
 
       it "returns unprocessable entity for duplicate email" do
@@ -77,7 +77,7 @@ RSpec.describe "Authentication", type: :request do
 
         post "/api/v1/signup", params: valid_params, as: :json
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json_response["errors"]).to be_present
       end
 
@@ -87,7 +87,7 @@ RSpec.describe "Authentication", type: :request do
 
         post "/api/v1/signup", params: invalid_params, as: :json
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 

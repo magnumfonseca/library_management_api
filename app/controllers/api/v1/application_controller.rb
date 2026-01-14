@@ -33,36 +33,6 @@ module Api
           ]
         }, status: :not_found
       end
-
-      def render_jsonapi_success(data, status: :ok, meta: nil)
-        response = data
-        response[:meta] = meta if meta.present?
-        render json: response, status: status
-      end
-
-      def render_jsonapi_error(title:, detail:, status: :unprocessable_entity, errors: [])
-        error_response = {
-          errors: [
-            {
-              status: Rack::Utils::SYMBOL_TO_STATUS_CODE[status].to_s,
-              title: title,
-              detail: detail
-            }
-          ]
-        }
-
-        if errors.present?
-          error_response[:errors] += errors.map do |error|
-            {
-              status: Rack::Utils::SYMBOL_TO_STATUS_CODE[status].to_s,
-              title: "Validation Error",
-              detail: error
-            }
-          end
-        end
-
-        render json: error_response, status: status
-      end
     end
   end
 end
