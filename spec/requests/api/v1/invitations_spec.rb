@@ -5,11 +5,6 @@ require "rails_helper"
 RSpec.describe "Invitations API", type: :request, openapi_spec: "v1/swagger.yaml" do
   let(:librarian) { create(:user, :librarian) }
 
-  # Helper to generate JWT token for a user
-  def jwt_token_for(user)
-    Warden::JWTAuth::UserEncoder.new.call(user, :user, nil).first
-  end
-
   path "/api/v1/invitations/token/{token}" do
     parameter name: :token, in: :path, type: :string, required: true, description: "Invitation token"
 
