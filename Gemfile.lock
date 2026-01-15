@@ -74,6 +74,8 @@ GEM
       minitest (>= 5.1)
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
+    addressable (2.8.8)
+      public_suffix (>= 2.0.2, < 8.0)
     ast (2.4.3)
     base64 (0.3.0)
     bcrypt (3.1.21)
@@ -136,6 +138,9 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     json (2.18.0)
+    json-schema (6.1.0)
+      addressable (~> 2.8)
+      bigdecimal (>= 3.1, < 5)
     jsonapi-serializer (2.2.0)
       activesupport (>= 4.2)
     jwt (3.1.2)
@@ -202,6 +207,7 @@ GEM
     psych (5.3.1)
       date
       stringio
+    public_suffix (7.0.2)
     puma (7.1.0)
       nio4r (~> 2.0)
     pundit (2.5.2)
@@ -278,6 +284,21 @@ GEM
       rspec-mocks (~> 3.13)
       rspec-support (~> 3.13)
     rspec-support (3.13.6)
+    rswag (2.17.0)
+      rswag-api (= 2.17.0)
+      rswag-specs (= 2.17.0)
+      rswag-ui (= 2.17.0)
+    rswag-api (2.17.0)
+      activesupport (>= 5.2, < 8.2)
+      railties (>= 5.2, < 8.2)
+    rswag-specs (2.17.0)
+      activesupport (>= 5.2, < 8.2)
+      json-schema (>= 2.2, < 7.0)
+      railties (>= 5.2, < 8.2)
+      rspec-core (>= 2.14)
+    rswag-ui (2.17.0)
+      actionpack (>= 5.2, < 8.2)
+      railties (>= 5.2, < 8.2)
     rubocop (1.82.1)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
@@ -361,6 +382,8 @@ DEPENDENCIES
   rack-cors
   rails (~> 7.2.0)
   rspec-rails
+  rswag
+  rswag-ui
   rubocop-rails-omakase
   shoulda-matchers
   tzinfo-data
@@ -377,6 +400,7 @@ CHECKSUMS
   activerecord (7.2.3) sha256=6facb7478ceb5f6baa9f0647daa50b4a3a43934997900f0011e6c667ff41a0d7
   activestorage (7.2.3) sha256=4c1422bbfaa60c89e7b43cc38ade7bd3b8dc81024c48a21c1ac56814cf34ca2f
   activesupport (7.2.3) sha256=5675c9770dac93e371412684249f9dc3c8cec104efd0624362a520ae685c7b10
+  addressable (2.8.8) sha256=7c13b8f9536cf6364c03b9d417c19986019e28f7c00ac8132da4eb0fe393b057
   ast (2.4.3) sha256=954615157c1d6a382bc27d690d973195e79db7f55e9765ac7c481c60bdb4d383
   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   bcrypt (3.1.21) sha256=5964613d750a42c7ee5dc61f7b9336fb6caca429ba4ac9f2011609946e4a2dcf
@@ -410,6 +434,7 @@ CHECKSUMS
   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc
   irb (1.16.0) sha256=2abe56c9ac947cdcb2f150572904ba798c1e93c890c256f8429981a7675b0806
   json (2.18.0) sha256=b10506aee4183f5cf49e0efc48073d7b75843ce3782c68dbeb763351c08fd505
+  json-schema (6.1.0) sha256=6bf70a2cfb6dfd5a06da28093fa8190f324c88eabd36a7f47097f227321dc702
   jsonapi-serializer (2.2.0) sha256=f8141ac6f0c1e17e8513df68f8341afe2d7bffc285841d7090bc07f07efb0029
   jwt (3.1.2) sha256=af6991f19a6bb4060d618d9add7a66f0eeb005ac0bc017cd01f63b42e122d535
   language_server-protocol (3.17.0.5) sha256=fd1e39a51a28bf3eec959379985a72e296e9f9acfce46f6a79d31ca8760803cc
@@ -448,6 +473,7 @@ CHECKSUMS
   prettyprint (0.2.0) sha256=2bc9e15581a94742064a3cc8b0fb9d45aae3d03a1baa6ef80922627a0766f193
   prism (1.8.0) sha256=84453a16ef5530ea62c5f03ec16b52a459575ad4e7b9c2b360fd8ce2c39c1254
   psych (5.3.1) sha256=eb7a57cef10c9d70173ff74e739d843ac3b2c019a003de48447b2963d81b1974
+  public_suffix (7.0.2) sha256=9114090c8e4e7135c1fd0e7acfea33afaab38101884320c65aaa0ffb8e26a857
   puma (7.1.0) sha256=e45c10cb124f224d448c98db653a75499794edbecadc440ad616cf50f2fd49dd
   pundit (2.5.2) sha256=e374152baa24f90b630428293faf4b4c5468fc3cc010165f7d8fcb44ce108bbd
   racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
@@ -471,6 +497,10 @@ CHECKSUMS
   rspec-mocks (3.13.7) sha256=0979034e64b1d7a838aaaddf12bf065ea4dc40ef3d4c39f01f93ae2c66c62b1c
   rspec-rails (8.0.2) sha256=113139a53f5d068d4f48d1c29ad5f982013ed9b0daa69d7f7b266eda5d433ace
   rspec-support (3.13.6) sha256=2e8de3702427eab064c9352fe74488cc12a1bfae887ad8b91cba480ec9f8afb2
+  rswag (2.17.0) sha256=aba267bd205f0f4f8db53277182897f125890338731971641add050f7911414c
+  rswag-api (2.17.0) sha256=728b336b65168ab8ab6024b0e5d267b485c22ccdeb9dfbfb6ec3bac423545a13
+  rswag-specs (2.17.0) sha256=a3b2bdf6df89f8741fe4a4ee47ceb1e77dc13e1c96bbe07352117d6e61afa9e3
+  rswag-ui (2.17.0) sha256=5f707b9b5e8171ddf9f519f6e401e79e419bd1d07387508603e76124f2443212
   rubocop (1.82.1) sha256=09f1a6a654a960eda767aebea33e47603080f8e9c9a3f019bf9b94c9cab5e273
   rubocop-ast (1.49.0) sha256=49c3676d3123a0923d333e20c6c2dbaaae2d2287b475273fddee0c61da9f71fd
   rubocop-performance (1.26.1) sha256=cd19b936ff196df85829d264b522fd4f98b6c89ad271fa52744a8c11b8f71834

@@ -2,383 +2,522 @@
 
 require "rails_helper"
 
-RSpec.describe "Books API", type: :request do
+RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
   let(:librarian) { create(:user, :librarian) }
   let(:member) { create(:user, :member) }
 
-  describe "GET /api/v1/books" do
-    context "when authenticated" do
-      before { create_list(:book, 3) }
-
-      it "returns ok status" do
-        auth_get "/api/v1/books", user: member
-
-        expect(response).to have_http_status(:ok)
-      end
-
-      it "returns all books in JSON:API format" do
-        auth_get "/api/v1/books", user: member
-
-        expect(json_response).to have_key("data")
-        expect(json_response["data"].size).to eq(3)
-        expect(json_response["data"].first).to have_key("type")
-        expect(json_response["data"].first["type"]).to eq("books")
-      end
-
-      it "returns book attributes" do
-        book = create(:book, title: "Test Book", author: "Test Author", genre: "Fiction", isbn: "1234567890", total_copies: 5)
-
-        auth_get "/api/v1/books", user: member
-
-        book_data = json_response["data"].find { |b| b["id"] == book.id.to_s }
-        expect(book_data["attributes"]["title"]).to eq("Test Book")
-        expect(book_data["attributes"]["author"]).to eq("Test Author")
-        expect(book_data["attributes"]["genre"]).to eq("Fiction")
-        expect(book_data["attributes"]["isbn"]).to eq("1234567890")
-        expect(book_data["attributes"]["total_copies"]).to eq(5)
-        expect(book_data["attributes"]["available_copies"]).to eq(5)
-      end
-
-      it "allows both members and librarians to list books" do
-        auth_get "/api/v1/books", user: librarian
-
-        expect(response).to have_http_status(:ok)
-      end
-    end
-
-    context "when not authenticated" do
-      it "returns unauthorized status" do
-        get "/api/v1/books", as: :json
-
-        expect(response).to have_http_status(:unauthorized)
-      end
-    end
+  # Helper to generate JWT token for a user
+  def jwt_token_for(user)
+    Warden::JWTAuth::UserEncoder.new.call(user, :user, nil).first
   end
 
-  describe "GET /api/v1/books/:id" do
-    let!(:book) { create(:book, title: "Specific Book", author: "Specific Author") }
+  path "/api/v1/books" do
+    get "List all books" do
+      tags "Books"
+      description "Retrieve a paginated list of all books in the library. Available to all authenticated users."
+      produces "application/vnd.api+json"
+      security [ { bearer_jwt: [] } ]
 
-    context "when authenticated" do
-      it "returns ok status" do
-        auth_get "/api/v1/books/#{book.id}", user: member
+      parameter name: :Authorization,
+                in: :header,
+                type: :string,
+                required: true,
+                description: "JWT Bearer token"
 
-        expect(response).to have_http_status(:ok)
+      response "200", "Books retrieved successfully" do
+        schema type: :object,
+               properties: {
+                 data: {
+                   type: :array,
+                   items: {
+                     type: :object,
+                     properties: {
+                       id: { type: :string },
+                       type: { type: :string, example: "books" },
+                       attributes: {
+                         type: :object,
+                         properties: {
+                           title: { type: :string },
+                           author: { type: :string },
+                           genre: { type: :string },
+                           isbn: { type: :string },
+                           total_copies: { type: :integer },
+                           available_copies: { type: :integer }
+                         }
+                       }
+                     }
+                   }
+                 },
+                 meta: { type: :object }
+               }
+
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+
+        before { create_list(:book, 3) }
+
+        run_test! do |response|
+          expect(json_response).to have_key("data")
+          expect(json_response["data"].size).to eq(3)
+          expect(json_response["data"].first).to have_key("type")
+          expect(json_response["data"].first["type"]).to eq("books")
+        end
       end
 
-      it "returns the book in JSON:API format" do
-        auth_get "/api/v1/books/#{book.id}", user: member
+      response "200", "Returns book attributes correctly" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
 
-        expect(json_response).to have_key("data")
-        expect(json_response["data"]["type"]).to eq("books")
-        expect(json_response["data"]["id"]).to eq(book.id.to_s)
-        expect(json_response["data"]["attributes"]["title"]).to eq("Specific Book")
-        expect(json_response["data"]["attributes"]["author"]).to eq("Specific Author")
+        before do
+          create(:book, title: "Test Book", author: "Test Author", genre: "Fiction", isbn: "1234567890", total_copies: 5)
+        end
+
+        run_test! do |response|
+          book_data = json_response["data"].first
+          expect(book_data["attributes"]["title"]).to eq("Test Book")
+          expect(book_data["attributes"]["author"]).to eq("Test Author")
+          expect(book_data["attributes"]["genre"]).to eq("Fiction")
+          expect(book_data["attributes"]["isbn"]).to eq("1234567890")
+          expect(book_data["attributes"]["total_copies"]).to eq(5)
+          expect(book_data["attributes"]["available_copies"]).to eq(5)
+        end
       end
 
-      it "returns available_copies correctly" do
-        create(:borrowing, book: book)
+      response "200", "Allows librarians to list books" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
 
-        auth_get "/api/v1/books/#{book.id}", user: member
+        before { create_list(:book, 2) }
 
-        expect(json_response["data"]["attributes"]["available_copies"]).to eq(book.available_copies)
+        run_test!
+      end
+
+      response "401", "Unauthorized - Missing or invalid token" do
+        let(:Authorization) { nil }
+
+        run_test!
       end
     end
 
-    context "when book does not exist" do
-      it "returns not found status" do
-        auth_get "/api/v1/books/999999", user: member
+    post "Create a new book" do
+      tags "Books"
+      description "Create a new book in the library. Only librarians can create books."
+      consumes "application/json"
+      produces "application/vnd.api+json"
+      security [ { bearer_jwt: [] } ]
 
-        expect(response).to have_http_status(:not_found)
-      end
+      parameter name: :Authorization,
+                in: :header,
+                type: :string,
+                required: true,
+                description: "JWT Bearer token"
 
-      it "returns error in JSON:API format" do
-        auth_get "/api/v1/books/999999", user: member
-
-        expect(json_response).to have_key("errors")
-        expect(json_response["errors"].first["status"]).to eq("404")
-      end
-    end
-
-    context "when not authenticated" do
-      it "returns unauthorized status" do
-        get "/api/v1/books/#{book.id}", as: :json
-
-        expect(response).to have_http_status(:unauthorized)
-      end
-    end
-  end
-
-  describe "POST /api/v1/books" do
-    let(:valid_params) do
-      {
-        book: {
-          title: "New Book",
-          author: "New Author",
-          genre: "Fiction",
-          isbn: "9781234567890",
-          total_copies: 5
-        }
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        properties: {
+          book: {
+            type: :object,
+            properties: {
+              title: { type: :string, description: "Book title" },
+              author: { type: :string, description: "Author name" },
+              genre: { type: :string, description: "Book genre" },
+              isbn: { type: :string, description: "ISBN-10 or ISBN-13" },
+              total_copies: { type: :integer, description: "Total number of copies" }
+            },
+            required: %w[title author total_copies]
+          }
+        },
+        required: %w[book]
       }
-    end
 
-    context "when user is a librarian" do
-      it "returns created status" do
-        auth_post "/api/v1/books", params: valid_params, user: librarian
-
-        expect(response).to have_http_status(:created)
+      let(:valid_params) do
+        {
+          book: {
+            title: "New Book",
+            author: "New Author",
+            genre: "Fiction",
+            isbn: "9781234567890",
+            total_copies: 5
+          }
+        }
       end
 
-      it "creates a new book" do
-        expect {
-          auth_post "/api/v1/books", params: valid_params, user: librarian
-        }.to change(Book, :count).by(1)
+      response "201", "Book created successfully" do
+        schema type: :object,
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     id: { type: :string },
+                     type: { type: :string, example: "books" },
+                     attributes: {
+                       type: :object,
+                       properties: {
+                         title: { type: :string },
+                         author: { type: :string },
+                         genre: { type: :string },
+                         isbn: { type: :string },
+                         total_copies: { type: :integer },
+                         available_copies: { type: :integer }
+                       }
+                     }
+                   }
+                 },
+                 meta: {
+                   type: :object,
+                   properties: {
+                     message: { type: :string }
+                   }
+                 }
+               }
+
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:body) { valid_params }
+
+        run_test! do |response|
+          expect(json_response).to have_key("data")
+          expect(json_response["data"]["type"]).to eq("books")
+          expect(json_response["data"]["attributes"]["title"]).to eq("New Book")
+          expect(json_response["data"]["attributes"]["author"]).to eq("New Author")
+          expect(json_response["data"]["attributes"]["genre"]).to eq("Fiction")
+          expect(json_response["data"]["attributes"]["isbn"]).to eq("9781234567890")
+          expect(json_response["data"]["attributes"]["total_copies"]).to eq(5)
+          expect(json_response["data"]["attributes"]["available_copies"]).to eq(5)
+          expect(json_response["meta"]["message"]).to eq("Book created successfully.")
+        end
       end
 
-      it "returns the created book in JSON:API format" do
-        auth_post "/api/v1/books", params: valid_params, user: librarian
+      response "201", "Creates a new book record" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:body) { valid_params }
 
-        expect(json_response).to have_key("data")
-        expect(json_response["data"]["type"]).to eq("books")
-        expect(json_response["data"]["attributes"]["title"]).to eq("New Book")
-        expect(json_response["data"]["attributes"]["author"]).to eq("New Author")
-        expect(json_response["data"]["attributes"]["genre"]).to eq("Fiction")
-        expect(json_response["data"]["attributes"]["isbn"]).to eq("9781234567890")
-        expect(json_response["data"]["attributes"]["total_copies"]).to eq(5)
-        expect(json_response["data"]["attributes"]["available_copies"]).to eq(5)
+        run_test! do
+          expect(Book.count).to eq(1)
+        end
       end
 
-      it "returns success message in meta" do
-        auth_post "/api/v1/books", params: valid_params, user: librarian
+      response "403", "Forbidden - Only librarians can create books" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:body) { valid_params }
 
-        expect(json_response["meta"]["message"]).to eq("Book created successfully.")
-      end
-    end
-
-    context "when user is a member" do
-      it "returns forbidden status" do
-        auth_post "/api/v1/books", params: valid_params, user: member
-
-        expect(response).to have_http_status(:forbidden)
+        run_test!
       end
 
-      it "does not create a book" do
-        expect {
-          auth_post "/api/v1/books", params: valid_params, user: member
-        }.not_to change(Book, :count)
-      end
-    end
+      response "422", "Validation error - Missing title" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:body) do
+          { book: valid_params[:book].merge(title: "") }
+        end
 
-    context "with invalid parameters" do
-      it "returns unprocessable entity for missing title" do
-        invalid_params = valid_params.deep_dup
-        invalid_params[:book][:title] = ""
-
-        auth_post "/api/v1/books", params: invalid_params, user: librarian
-
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json_response["errors"]).to be_present
+        run_test! do |response|
+          expect(json_response["errors"]).to be_present
+        end
       end
 
-      it "returns unprocessable entity for duplicate ISBN" do
-        create(:book, isbn: "9781234567890")
+      response "422", "Validation error - Duplicate ISBN" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:body) { valid_params }
 
-        auth_post "/api/v1/books", params: valid_params, user: librarian
+        before { create(:book, isbn: "9781234567890") }
 
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json_response["errors"]).to be_present
+        run_test! do |response|
+          expect(json_response["errors"]).to be_present
+        end
       end
 
-      it "returns unprocessable entity for invalid total_copies" do
-        invalid_params = valid_params.deep_dup
-        invalid_params[:book][:total_copies] = 0
+      response "422", "Validation error - Invalid total_copies" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:body) do
+          { book: valid_params[:book].merge(total_copies: 0) }
+        end
 
-        auth_post "/api/v1/books", params: invalid_params, user: librarian
-
-        expect(response).to have_http_status(:unprocessable_content)
+        run_test!
       end
-    end
 
-    context "when not authenticated" do
-      it "returns unauthorized status" do
-        post "/api/v1/books", params: valid_params, as: :json
+      response "401", "Unauthorized" do
+        let(:Authorization) { nil }
+        let(:body) { valid_params }
 
-        expect(response).to have_http_status(:unauthorized)
+        run_test!
       end
     end
   end
 
-  describe "PATCH /api/v1/books/:id" do
-    let!(:book) { create(:book, title: "Original Title", author: "Original Author", total_copies: 5) }
-    let(:update_params) { { book: { title: "Updated Title" } } }
+  path "/api/v1/books/{id}" do
+    parameter name: :id, in: :path, type: :string, required: true, description: "Book ID"
 
-    context "when user is a librarian" do
-      it "returns ok status" do
-        auth_patch "/api/v1/books/#{book.id}", params: update_params, user: librarian
+    get "Get book details" do
+      tags "Books"
+      description "Retrieve detailed information about a specific book. Available to all authenticated users."
+      produces "application/vnd.api+json"
+      security [ { bearer_jwt: [] } ]
 
-        expect(response).to have_http_status(:ok)
-      end
+      parameter name: :Authorization,
+                in: :header,
+                type: :string,
+                required: true,
+                description: "JWT Bearer token"
 
-      it "updates the book" do
-        auth_patch "/api/v1/books/#{book.id}", params: update_params, user: librarian
+      let!(:book) { create(:book, title: "Specific Book", author: "Specific Author") }
 
-        expect(book.reload.title).to eq("Updated Title")
-      end
+      response "200", "Book retrieved successfully" do
+        schema type: :object,
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     id: { type: :string },
+                     type: { type: :string, example: "books" },
+                     attributes: {
+                       type: :object,
+                       properties: {
+                         title: { type: :string },
+                         author: { type: :string },
+                         genre: { type: :string },
+                         isbn: { type: :string },
+                         total_copies: { type: :integer },
+                         available_copies: { type: :integer }
+                       }
+                     }
+                   }
+                 },
+                 meta: { type: :object }
+               }
 
-      it "returns the updated book in JSON:API format" do
-        auth_patch "/api/v1/books/#{book.id}", params: update_params, user: librarian
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:id) { book.id }
 
-        expect(json_response["data"]["attributes"]["title"]).to eq("Updated Title")
-        expect(json_response["data"]["attributes"]["author"]).to eq("Original Author")
-      end
-
-      it "returns success message in meta" do
-        auth_patch "/api/v1/books/#{book.id}", params: update_params, user: librarian
-
-        expect(json_response["meta"]["message"]).to eq("Book updated successfully.")
-      end
-
-      it "can update multiple attributes" do
-        auth_patch "/api/v1/books/#{book.id}",
-                   params: { book: { title: "New Title", author: "New Author", genre: "Science" } },
-                   user: librarian
-
-        expect(response).to have_http_status(:ok)
-        expect(json_response["data"]["attributes"]["title"]).to eq("New Title")
-        expect(json_response["data"]["attributes"]["author"]).to eq("New Author")
-        expect(json_response["data"]["attributes"]["genre"]).to eq("Science")
-      end
-    end
-
-    context "when user is a member" do
-      it "returns forbidden status" do
-        auth_patch "/api/v1/books/#{book.id}", params: update_params, user: member
-
-        expect(response).to have_http_status(:forbidden)
-      end
-
-      it "does not update the book" do
-        auth_patch "/api/v1/books/#{book.id}", params: update_params, user: member
-
-        expect(book.reload.title).to eq("Original Title")
-      end
-    end
-
-    context "with invalid parameters" do
-      it "returns unprocessable entity for empty title" do
-        auth_patch "/api/v1/books/#{book.id}",
-                   params: { book: { title: "" } },
-                   user: librarian
-
-        expect(response).to have_http_status(:unprocessable_content)
-      end
-
-      it "returns unprocessable entity for duplicate ISBN" do
-        other_book = create(:book)
-
-        auth_patch "/api/v1/books/#{book.id}",
-                   params: { book: { isbn: other_book.isbn } },
-                   user: librarian
-
-        expect(response).to have_http_status(:unprocessable_content)
-      end
-    end
-
-    context "when book does not exist" do
-      it "returns not found status" do
-        auth_patch "/api/v1/books/999999", params: update_params, user: librarian
-
-        expect(response).to have_http_status(:not_found)
-      end
-    end
-
-    context "when not authenticated" do
-      it "returns unauthorized status" do
-        patch "/api/v1/books/#{book.id}", params: update_params, as: :json
-
-        expect(response).to have_http_status(:unauthorized)
-      end
-    end
-  end
-
-  describe "DELETE /api/v1/books/:id" do
-    let!(:book) { create(:book) }
-
-    context "when user is a librarian" do
-      context "with no active borrowings" do
-        it "returns no content status" do
-          auth_delete "/api/v1/books/#{book.id}", user: librarian
-
-          expect(response).to have_http_status(:no_content)
-        end
-
-        it "deletes the book" do
-          expect {
-            auth_delete "/api/v1/books/#{book.id}", user: librarian
-          }.to change(Book, :count).by(-1)
+        run_test! do |response|
+          expect(json_response).to have_key("data")
+          expect(json_response["data"]["type"]).to eq("books")
+          expect(json_response["data"]["id"]).to eq(book.id.to_s)
+          expect(json_response["data"]["attributes"]["title"]).to eq("Specific Book")
+          expect(json_response["data"]["attributes"]["author"]).to eq("Specific Author")
         end
       end
 
-      context "with active borrowings" do
+      response "200", "Returns available_copies correctly with borrowings" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:id) { book.id }
+
         before { create(:borrowing, book: book) }
 
-        it "returns unprocessable entity status" do
-          auth_delete "/api/v1/books/#{book.id}", user: librarian
-
-          expect(response).to have_http_status(:unprocessable_content)
-        end
-
-        it "does not delete the book" do
-          expect {
-            auth_delete "/api/v1/books/#{book.id}", user: librarian
-          }.not_to change(Book, :count)
-        end
-
-        it "returns error message" do
-          auth_delete "/api/v1/books/#{book.id}", user: librarian
-
-          expect(json_response["errors"]).to be_present
-          expect(json_response["errors"].first["detail"]).to include("active borrowings")
+        run_test! do |response|
+          expect(json_response["data"]["attributes"]["available_copies"]).to eq(book.available_copies)
         end
       end
 
-      context "with only returned borrowings" do
+      response "404", "Book not found" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:id) { 999999 }
+
+        run_test! do |response|
+          expect(json_response).to have_key("errors")
+          expect(json_response["errors"].first["status"]).to eq("404")
+        end
+      end
+
+      response "401", "Unauthorized" do
+        let(:Authorization) { nil }
+        let(:id) { book.id }
+
+        run_test!
+      end
+    end
+
+    patch "Update book" do
+      tags "Books"
+      description "Update book information. Only librarians can update books."
+      consumes "application/json"
+      produces "application/vnd.api+json"
+      security [ { bearer_jwt: [] } ]
+
+      parameter name: :Authorization,
+                in: :header,
+                type: :string,
+                required: true,
+                description: "JWT Bearer token"
+
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        properties: {
+          book: {
+            type: :object,
+            properties: {
+              title: { type: :string },
+              author: { type: :string },
+              genre: { type: :string },
+              isbn: { type: :string },
+              total_copies: { type: :integer }
+            }
+          }
+        }
+      }
+
+      let!(:book) { create(:book, title: "Original Title", author: "Original Author", total_copies: 5) }
+
+      response "200", "Book updated successfully" do
+        schema type: :object,
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     id: { type: :string },
+                     type: { type: :string, example: "books" },
+                     attributes: {
+                       type: :object,
+                       properties: {
+                         title: { type: :string },
+                         author: { type: :string },
+                         genre: { type: :string },
+                         isbn: { type: :string },
+                         total_copies: { type: :integer },
+                         available_copies: { type: :integer }
+                       }
+                     }
+                   }
+                 },
+                 meta: {
+                   type: :object,
+                   properties: {
+                     message: { type: :string }
+                   }
+                 }
+               }
+
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:id) { book.id }
+        let(:body) { { book: { title: "Updated Title" } } }
+
+        run_test! do |response|
+          expect(json_response["data"]["attributes"]["title"]).to eq("Updated Title")
+          expect(json_response["data"]["attributes"]["author"]).to eq("Original Author")
+          expect(json_response["meta"]["message"]).to eq("Book updated successfully.")
+          expect(book.reload.title).to eq("Updated Title")
+        end
+      end
+
+      response "200", "Updates multiple attributes" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:id) { book.id }
+        let(:body) { { book: { title: "New Title", author: "New Author", genre: "Science" } } }
+
+        run_test! do |response|
+          expect(json_response["data"]["attributes"]["title"]).to eq("New Title")
+          expect(json_response["data"]["attributes"]["author"]).to eq("New Author")
+          expect(json_response["data"]["attributes"]["genre"]).to eq("Science")
+        end
+      end
+
+      response "403", "Forbidden - Only librarians can update books" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:id) { book.id }
+        let(:body) { { book: { title: "Updated Title" } } }
+
+        run_test! do
+          expect(book.reload.title).to eq("Original Title")
+        end
+      end
+
+      response "422", "Validation error - Empty title" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:id) { book.id }
+        let(:body) { { book: { title: "" } } }
+
+        run_test!
+      end
+
+      response "422", "Validation error - Duplicate ISBN" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:id) { book.id }
+
+        let(:body) { { book: { isbn: other_book.isbn } } }
+        let!(:other_book) { create(:book) }
+
+        run_test!
+      end
+
+      response "404", "Book not found" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:id) { 999999 }
+        let(:body) { { book: { title: "Updated Title" } } }
+
+        run_test!
+      end
+
+      response "401", "Unauthorized" do
+        let(:Authorization) { nil }
+        let(:id) { book.id }
+        let(:body) { { book: { title: "Updated Title" } } }
+
+        run_test!
+      end
+    end
+
+    delete "Delete book" do
+      tags "Books"
+      description "Delete a book from the library. Only librarians can delete books. Books with active borrowings cannot be deleted."
+      security [ { bearer_jwt: [] } ]
+
+      parameter name: :Authorization,
+                in: :header,
+                type: :string,
+                required: true,
+                description: "JWT Bearer token"
+
+      let!(:book) { create(:book) }
+
+      response "204", "Book deleted successfully" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:id) { book.id }
+
+        run_test! do
+          expect(Book.find_by(id: book.id)).to be_nil
+        end
+      end
+
+      response "204", "Deletes book with only returned borrowings" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:id) { book.id }
+
         before { create(:borrowing, :returned, book: book) }
 
-        it "allows deletion" do
-          expect {
-            auth_delete "/api/v1/books/#{book.id}", user: librarian
-          }.to change(Book, :count).by(-1)
+        run_test! do
+          expect(Book.find_by(id: book.id)).to be_nil
         end
       end
-    end
 
-    context "when user is a member" do
-      it "returns forbidden status" do
-        auth_delete "/api/v1/books/#{book.id}", user: member
+      response "403", "Forbidden - Only librarians can delete books" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:id) { book.id }
 
-        expect(response).to have_http_status(:forbidden)
+        run_test! do
+          expect(Book.find_by(id: book.id)).to be_present
+        end
       end
 
-      it "does not delete the book" do
-        expect {
-          auth_delete "/api/v1/books/#{book.id}", user: member
-        }.not_to change(Book, :count)
+      response "422", "Unprocessable entity - Book has active borrowings" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:id) { book.id }
+
+        before { create(:borrowing, book: book) }
+
+        run_test! do |response|
+          expect(json_response["errors"]).to be_present
+          expect(json_response["errors"].first["detail"]).to include("active borrowings")
+          expect(Book.find_by(id: book.id)).to be_present
+        end
       end
-    end
 
-    context "when book does not exist" do
-      it "returns not found status" do
-        auth_delete "/api/v1/books/999999", user: librarian
+      response "404", "Book not found" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:id) { 999999 }
 
-        expect(response).to have_http_status(:not_found)
+        run_test!
       end
-    end
 
-    context "when not authenticated" do
-      it "returns unauthorized status" do
-        delete "/api/v1/books/#{book.id}", as: :json
+      response "401", "Unauthorized" do
+        let(:Authorization) { nil }
+        let(:id) { book.id }
 
-        expect(response).to have_http_status(:unauthorized)
+        run_test!
       end
     end
   end

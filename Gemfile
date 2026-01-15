@@ -56,4 +56,8 @@ group :development, :test do
   gem "factory_bot_rails"
   gem "faker"
   gem "shoulda-matchers"
+
+  # API Documentation
+  gem "rswag"
+  gem "rswag-ui"
 end
