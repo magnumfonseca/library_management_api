@@ -25,10 +25,14 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      resources :invitations, only: [ :create ] do
-        collection do
-          post :accept
-        end
+      # Authenticated invitation management (RESTful routes with numeric IDs)
+      resources :invitations, only: [ :index, :show, :create, :destroy ], constraints: { id: /\d+/ }
+
+      # Public token-based invitation routes (unauthenticated)
+      # These routes are intentionally separate to handle token-based access without authentication
+      scope :invitations, as: :invitation do
+        get "token/:token", to: "invitations#show_by_token", as: :by_token
+        patch "token/:token/accept", to: "invitations#accept", as: :accept_by_token
       end
 
       resources :books

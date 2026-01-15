@@ -15,9 +15,9 @@ RSpec.describe Invitations::AcceptService do
       }
     end
 
-    context "with valid token and parameters" do
+    context "with valid invitation and parameters" do
       it "returns a success response" do
-        response = described_class.new(token: invitation.token, params: valid_params).call
+        response = described_class.new(invitation: invitation, params: valid_params).call
 
         expect(response).to be_success
       end
@@ -27,7 +27,7 @@ RSpec.describe Invitations::AcceptService do
         invitation
 
         expect {
-          described_class.new(token: invitation.token, params: valid_params).call
+          described_class.new(invitation: invitation, params: valid_params).call
         }.to change(User, :count).by(1)
 
         user = User.find_by(email: "invited@example.com")
@@ -37,43 +37,16 @@ RSpec.describe Invitations::AcceptService do
       end
 
       it "marks the invitation as accepted" do
-        described_class.new(token: invitation.token, params: valid_params).call
+        described_class.new(invitation: invitation, params: valid_params).call
 
         invitation.reload
         expect(invitation).to be_accepted
       end
 
       it "includes success message in meta" do
-        response = described_class.new(token: invitation.token, params: valid_params).call
+        response = described_class.new(invitation: invitation, params: valid_params).call
 
         expect(response.meta[:message]).to eq("Account created successfully.")
-      end
-    end
-
-    context "when token is missing (400 Bad Request)" do
-      it "returns bad request for empty token" do
-        response = described_class.new(token: "", params: valid_params).call
-
-        expect(response).to be_failure
-        expect(response.http_status).to eq(:bad_request)
-        expect(response.errors).to include("Invitation token is required.")
-      end
-
-      it "returns bad request for nil token" do
-        response = described_class.new(token: nil, params: valid_params).call
-
-        expect(response).to be_failure
-        expect(response.http_status).to eq(:bad_request)
-      end
-    end
-
-    context "when token is invalid (404 Not Found)" do
-      it "returns not found" do
-        response = described_class.new(token: "invalid_token", params: valid_params).call
-
-        expect(response).to be_failure
-        expect(response.http_status).to eq(:not_found)
-        expect(response.errors).to include("Invalid invitation token.")
       end
     end
 
@@ -81,7 +54,7 @@ RSpec.describe Invitations::AcceptService do
       let(:expired_invitation) { create(:invitation, :expired, invited_by: librarian) }
 
       it "returns gone" do
-        response = described_class.new(token: expired_invitation.token, params: valid_params).call
+        response = described_class.new(invitation: expired_invitation, params: valid_params).call
 
         expect(response).to be_failure
         expect(response.http_status).to eq(:gone)
@@ -93,7 +66,7 @@ RSpec.describe Invitations::AcceptService do
       let(:accepted_invitation) { create(:invitation, :accepted, invited_by: librarian) }
 
       it "returns gone" do
-        response = described_class.new(token: accepted_invitation.token, params: valid_params).call
+        response = described_class.new(invitation: accepted_invitation, params: valid_params).call
 
         expect(response).to be_failure
         expect(response.http_status).to eq(:gone)
@@ -104,7 +77,7 @@ RSpec.describe Invitations::AcceptService do
     context "when user params are invalid" do
       it "returns error for missing name" do
         params = valid_params.merge(name: "")
-        response = described_class.new(token: invitation.token, params: params).call
+        response = described_class.new(invitation: invitation, params: params).call
 
         expect(response).to be_failure
         expect(response.errors).to include("Name can't be blank")
@@ -112,14 +85,14 @@ RSpec.describe Invitations::AcceptService do
 
       it "returns error for short password" do
         params = valid_params.merge(password: "short", password_confirmation: "short")
-        response = described_class.new(token: invitation.token, params: params).call
+        response = described_class.new(invitation: invitation, params: params).call
 
         expect(response).to be_failure
       end
 
       it "does not mark invitation as accepted when user creation fails" do
         params = valid_params.merge(name: "")
-        described_class.new(token: invitation.token, params: params).call
+        described_class.new(invitation: invitation, params: params).call
 
         invitation.reload
         expect(invitation).not_to be_accepted

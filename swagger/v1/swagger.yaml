@@ -714,6 +714,359 @@ paths:
           description: Borrowing not found
         '401':
           description: Unauthorized
+  "/api/v1/invitations":
+    get:
+      summary: List all invitations
+      tags:
+      - Invitations
+      description: Retrieve a paginated list of all invitations. Only available to
+        librarians.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Number of items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      - name: page[number]
+        in: query
+        required: false
+        description: Page number (JSON:API style)
+        schema:
+          type: integer
+      - name: page[size]
+        in: query
+        required: false
+        description: Page size (JSON:API style)
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Orders invitations by created_at desc
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                          example: invitations
+                        attributes:
+                          type: object
+                          properties:
+                            email:
+                              type: string
+                            role:
+                              type: string
+                            expires_at:
+                              type: string
+                              format: date-time
+                            accepted_at:
+                              type: string
+                              format: date-time
+                              nullable: true
+                            status:
+                              type: string
+                              enum:
+                              - pending
+                              - accepted
+                              - expired
+                            created_at:
+                              type: string
+                              format: date-time
+                        relationships:
+                          type: object
+                          properties:
+                            invited_by:
+                              type: object
+                              properties:
+                                data:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                                    type:
+                                      type: string
+                                      example: users
+                  meta:
+                    type: object
+                    properties:
+                      page:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          totalPages:
+                            type: integer
+                          number:
+                            type: integer
+                          size:
+                            type: integer
+                  links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                        nullable: true
+                      next:
+                        type: string
+                        nullable: true
+        '403':
+          description: Member cannot list invitations
+        '401':
+          description: Requires authentication
+    post:
+      summary: Create invitation
+      tags:
+      - Invitations
+      description: Create a new invitation to invite a librarian to join the system.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '201':
+          description: Invitation created successfully
+        '403':
+          description: Member cannot create invitations
+        '422':
+          description: Invalid email format
+        '400':
+          description: Email is required
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invitation:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                  required:
+                  - email
+              required:
+              - invitation
+  "/api/v1/invitations/{id}":
+    parameters:
+    - name: id
+      in: path
+      description: Invitation ID
+      required: true
+      schema:
+        type: integer
+    get:
+      summary: Show invitation
+      tags:
+      - Invitations
+      description: Retrieve details of a specific invitation. Only available to librarians.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Invitation retrieved successfully
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        example: invitations
+                      attributes:
+                        type: object
+                        properties:
+                          email:
+                            type: string
+                          role:
+                            type: string
+                          expires_at:
+                            type: string
+                            format: date-time
+                          accepted_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                          status:
+                            type: string
+                          created_at:
+                            type: string
+                            format: date-time
+                      relationships:
+                        type: object
+                  meta:
+                    type: object
+        '403':
+          description: Member cannot view invitations
+        '404':
+          description: Invitation not found
+    delete:
+      summary: Delete invitation
+      tags:
+      - Invitations
+      description: Cancel a pending invitation. Only available to librarians. Cannot
+        delete accepted or expired invitations.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Invitation deleted successfully
+        '403':
+          description: Cannot delete expired invitation (policy check)
+        '404':
+          description: Invitation not found
+  "/api/v1/invitations/token/{token}":
+    parameters:
+    - name: token
+      in: path
+      description: Invitation token
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Show invitation by token
+      tags:
+      - Invitations
+      description: Retrieve invitation details using a token. No authentication required.
+        Public endpoint for invitation recipients.
+      responses:
+        '200':
+          description: Invitation retrieved successfully
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        example: invitations
+                      attributes:
+                        type: object
+                        properties:
+                          email:
+                            type: string
+                          role:
+                            type: string
+                          expires_at:
+                            type: string
+                            format: date-time
+                          accepted_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                          status:
+                            type: string
+                      relationships:
+                        type: object
+                  meta:
+                    type: object
+        '404':
+          description: Invalid token
+  "/api/v1/invitations/token/{token}/accept":
+    parameters:
+    - name: token
+      in: path
+      description: Invitation token
+      required: true
+      schema:
+        type: string
+    patch:
+      summary: Accept invitation
+      tags:
+      - Invitations
+      description: Accept an invitation and create a new user account. No authentication
+        required.
+      parameters: []
+      responses:
+        '201':
+          description: Account created successfully
+        '410':
+          description: Invitation already accepted
+        '422':
+          description: Invalid user data
+        '404':
+          description: Invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    password:
+                      type: string
+                      format: password
+                    password_confirmation:
+                      type: string
+                      format: password
+                  required:
+                  - name
+                  - password
+                  - password_confirmation
+              required:
+              - user
 servers:
 - url: http://localhost:3000
   description: Development server
