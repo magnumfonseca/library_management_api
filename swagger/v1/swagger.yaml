@@ -1,0 +1,323 @@
+---
+openapi: 3.0.1
+info:
+  title: Library Management API
+  version: v1
+  description: Comprehensive REST API for managing a library system with user authentication,
+    book management, and borrowing features
+  contact:
+    name: Library Management Team
+paths:
+  "/api/v1/books":
+    get:
+      summary: List all books
+      tags:
+      - Books
+      description: Retrieve a paginated list of all books in the library. Available
+        to all authenticated users.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Allows librarians to list books
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                          example: books
+                        attributes:
+                          type: object
+                          properties:
+                            title:
+                              type: string
+                            author:
+                              type: string
+                            genre:
+                              type: string
+                            isbn:
+                              type: string
+                            total_copies:
+                              type: integer
+                            available_copies:
+                              type: integer
+        '401':
+          description: Unauthorized - Missing or invalid token
+    post:
+      summary: Create a new book
+      tags:
+      - Books
+      description: Create a new book in the library. Only librarians can create books.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '201':
+          description: Creates a new book record
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        example: books
+                      attributes:
+                        type: object
+                        properties:
+                          title:
+                            type: string
+                          author:
+                            type: string
+                          genre:
+                            type: string
+                          isbn:
+                            type: string
+                          total_copies:
+                            type: integer
+                          available_copies:
+                            type: integer
+                  meta:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+        '403':
+          description: Forbidden - Only librarians can create books
+        '422':
+          description: Validation error - Invalid total_copies
+        '401':
+          description: Unauthorized
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                book:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                      description: Book title
+                    author:
+                      type: string
+                      description: Author name
+                    genre:
+                      type: string
+                      description: Book genre
+                    isbn:
+                      type: string
+                      description: ISBN-10 or ISBN-13
+                    total_copies:
+                      type: integer
+                      description: Total number of copies
+                  required:
+                  - title
+                  - author
+                  - total_copies
+              required:
+              - book
+  "/api/v1/books/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Book ID
+      schema:
+        type: string
+    get:
+      summary: Get book details
+      tags:
+      - Books
+      description: Retrieve detailed information about a specific book. Available
+        to all authenticated users.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Returns available_copies correctly with borrowings
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        example: books
+                      attributes:
+                        type: object
+                        properties:
+                          title:
+                            type: string
+                          author:
+                            type: string
+                          genre:
+                            type: string
+                          isbn:
+                            type: string
+                          total_copies:
+                            type: integer
+                          available_copies:
+                            type: integer
+        '404':
+          description: Book not found
+        '401':
+          description: Unauthorized
+    patch:
+      summary: Update book
+      tags:
+      - Books
+      description: Update book information. Only librarians can update books.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Updates multiple attributes
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        example: books
+                      attributes:
+                        type: object
+                        properties:
+                          title:
+                            type: string
+                          author:
+                            type: string
+                          genre:
+                            type: string
+                          isbn:
+                            type: string
+                          total_copies:
+                            type: integer
+                          available_copies:
+                            type: integer
+                  meta:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+        '403':
+          description: Forbidden - Only librarians can update books
+        '422':
+          description: Validation error - Duplicate ISBN
+        '404':
+          description: Book not found
+        '401':
+          description: Unauthorized
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                book:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    author:
+                      type: string
+                    genre:
+                      type: string
+                    isbn:
+                      type: string
+                    total_copies:
+                      type: integer
+    delete:
+      summary: Delete book
+      tags:
+      - Books
+      description: Delete a book from the library. Only librarians can delete books.
+        Books with active borrowings cannot be deleted.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Deletes book with only returned borrowings
+        '403':
+          description: Forbidden - Only librarians can delete books
+        '422':
+          description: Unprocessable entity - Book has active borrowings
+        '404':
+          description: Book not found
+        '401':
+          description: Unauthorized
+servers:
+- url: http://localhost:3000
+  description: Development server
+- url: https://{host}
+  description: Production server
+  variables:
+    host:
+      default: api.example.com
+components:
+  securitySchemes:
+    bearer_jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication token
