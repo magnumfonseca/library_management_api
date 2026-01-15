@@ -47,7 +47,8 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
                        }
                      }
                    }
-                 }
+                 },
+                 meta: { type: :object }
                }
 
         let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
@@ -276,7 +277,8 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
                        }
                      }
                    }
-                 }
+                 },
+                 meta: { type: :object }
                }
 
         let(:Authorization) { "Bearer #{jwt_token_for(member)}" }

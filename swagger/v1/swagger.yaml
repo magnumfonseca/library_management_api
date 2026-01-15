@@ -57,6 +57,8 @@ paths:
                               type: integer
                             available_copies:
                               type: integer
+                  meta:
+                    type: object
         '401':
           description: Unauthorized - Missing or invalid token
     post:
@@ -199,6 +201,8 @@ paths:
                             type: integer
                           available_copies:
                             type: integer
+                  meta:
+                    type: object
         '404':
           description: Book not found
         '401':
