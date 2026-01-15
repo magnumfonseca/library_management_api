@@ -15,5 +15,10 @@ FactoryBot.define do
     trait :overdue do
       due_date { 3.days.ago }
     end
+
+    trait :due_today do
+      borrowed_at { 14.days.ago }
+      due_date { Time.current.end_of_day }
+    end
   end
 end
