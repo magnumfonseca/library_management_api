@@ -1,38 +1,13 @@
 # frozen_string_literal: true
 
 class InvitationSerializer
-  def initialize(invitation, include_token: false)
-    @invitation = invitation
-    @include_token = include_token
-  end
+  include JSONAPI::Serializer
 
-  def as_jsonapi
-    {
-      data: {
-        type: "invitations",
-        id: @invitation.id.to_s,
-        attributes: {
-          email: @invitation.email,
-          role: @invitation.role,
-          token: @include_token ? @invitation.token : nil,
-          expires_at: @invitation.expires_at,
-          accepted_at: @invitation.accepted_at
-        },
-        relationships: {
-          invited_by: {
-            data: {
-              type: "users",
-              id: @invitation.invited_by_id.to_s
-            }
-          }
-        }
-      }
-    }
-  end
+  set_type :invitations
 
-  def self.collection(invitations)
-    {
-      data: invitations.map { |invitation| new(invitation).as_jsonapi[:data] }
-    }
-  end
+  attributes :email, :role, :expires_at, :accepted_at
+
+  attribute :token, if: proc { |_record, params| params && params[:include_token] }
+
+  belongs_to :invited_by, serializer: UserSerializer
 end

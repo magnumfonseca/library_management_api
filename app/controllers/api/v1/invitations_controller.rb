@@ -8,6 +8,7 @@ module Api
       skip_before_action :authenticate_user!, only: [ :accept ]
 
       def create
+        authorize Invitation
         response = Invitations::CreateService.new(
           params: invitation_params,
           current_user: current_user
@@ -15,7 +16,7 @@ module Api
 
         if response.success?
           render_service_success(response, serializer: InvitationSerializer,
-                                serializer_options: { include_token: true }, status: :created)
+                                params: { include_token: true }, status: :created)
         else
           render_service_failure(response)
         end

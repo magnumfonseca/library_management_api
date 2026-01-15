@@ -21,7 +21,7 @@ class User < ApplicationRecord
   before_create :assign_jti
 
   def jwt_payload
-    { "role" => role }
+    { "role" => role, "jti" => jti }
   end
 
   def revoke_jwt

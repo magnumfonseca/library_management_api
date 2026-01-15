@@ -37,24 +37,7 @@ RSpec.describe Invitations::CreateService do
       end
     end
 
-    context "when user is not a librarian (403 Forbidden)" do
-      let(:params) { { email: "newlibrarian@example.com" } }
 
-      it "returns forbidden for member" do
-        response = described_class.new(params: params, current_user: member).call
-
-        expect(response).to be_failure
-        expect(response.http_status).to eq(:forbidden)
-        expect(response.errors).to include("Only librarians can send invitations.")
-      end
-
-      it "returns forbidden for nil user" do
-        response = described_class.new(params: params, current_user: nil).call
-
-        expect(response).to be_failure
-        expect(response.http_status).to eq(:forbidden)
-      end
-    end
 
     context "when email is missing (400 Bad Request)" do
       it "returns bad request for empty email" do

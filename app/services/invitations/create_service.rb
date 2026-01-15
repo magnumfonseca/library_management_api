@@ -9,7 +9,6 @@ module Invitations
     end
 
     def call
-      return Response.failure("Only librarians can send invitations.", http_status: :forbidden) unless @current_user&.librarian?
       return Response.failure("Email is required.", http_status: :bad_request) if @email.blank?
       return Response.failure("A user with this email already exists.", http_status: :unprocessable_content) if User.exists?(email: @email)
       return Response.failure("An invitation for this email is already pending.", http_status: :unprocessable_content) if pending_invitation_exists?
