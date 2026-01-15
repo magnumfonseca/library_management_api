@@ -7,6 +7,7 @@ module Api
       include Paginatable
 
       skip_before_action :authenticate_user!, only: [ :accept, :show_by_token ]
+      skip_after_action :verify_authorized, only: [ :accept, :show_by_token ]
 
       before_action :set_invitation, only: [ :show, :destroy ]
       before_action :set_invitation_by_token, only: [ :accept, :show_by_token ]
@@ -76,9 +77,8 @@ module Api
 
       def set_invitation_by_token
         @invitation = Invitation.find_by!(token: params[:token])
-      rescue ActiveRecord::RecordNotFound => e
-        e.message.replace("Invalid invitation token")
-        raise
+      rescue ActiveRecord::RecordNotFound
+        raise ActiveRecord::RecordNotFound, "Invalid invitation token"
       end
 
       def invitation_params

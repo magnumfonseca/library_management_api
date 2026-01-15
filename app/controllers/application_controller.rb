@@ -5,11 +5,11 @@ class ApplicationController < ActionController::API
 
   def render_not_found(exception)
     render json: {
-      errors: [{
+      errors: [ {
         status: "404",
         title: "Not Found",
         detail: exception.message
-      }]
+      } ]
     }, status: :not_found
   end
 end
