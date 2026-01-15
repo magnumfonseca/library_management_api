@@ -14,7 +14,7 @@ end
 
 # Create Librarians
 puts "Creating librarians..."
-librarian1 = User.create!(
+User.create!(
   name: "Alice Johnson",
   email: "alice.johnson@library.com",
   password: "password123",
@@ -22,7 +22,7 @@ librarian1 = User.create!(
   role: :librarian
 )
 
-librarian2 = User.create!(
+User.create!(
   name: "Bob Smith",
   email: "bob.smith@library.com",
   password: "password123",

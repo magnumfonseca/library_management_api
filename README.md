@@ -22,7 +22,16 @@ cd library_management
 **Option A: Automated setup (Recommended)**
 
 ```bash
+# Make the script executable (first time only)
+chmod +x scripts/setup_env.sh
+
+# Run the setup script
 ./scripts/setup_env.sh
+```
+
+Alternatively, if the script is not executable:
+```bash
+bash scripts/setup_env.sh
 ```
 
 This will create a `.env` file with secure, randomly generated secrets.
@@ -50,8 +59,9 @@ docker-compose up --build
 This will:
 - Build the Rails application Docker image
 - Start PostgreSQL database
-- Create and migrate the database
 - Start the Rails server on port 3000
+
+**Note:** The database is automatically created and migrated on first run by the docker-entrypoint.
 
 ### 4. Seed the database (in a new terminal)
 
