@@ -10,6 +10,7 @@ class Book < ApplicationRecord
   validates :total_copies, numericality: { greater_than: 0 }
 
   # Scopes
+  scope :by_title, ->(title) { where("title ILIKE ?", "%#{title}%") }
   scope :by_genre, ->(genre) { where(genre: genre) }
   scope :by_author, ->(author) { where("author ILIKE ?", "%#{author}%") }
   scope :available, -> {

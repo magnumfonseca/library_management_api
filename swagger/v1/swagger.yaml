@@ -48,9 +48,27 @@ paths:
         description: Page size (JSON:API style)
         schema:
           type: integer
+      - name: title
+        in: query
+        required: false
+        description: Filter books by title (case-insensitive partial match)
+        schema:
+          type: string
+      - name: author
+        in: query
+        required: false
+        description: Filter books by author (case-insensitive partial match)
+        schema:
+          type: string
+      - name: genre
+        in: query
+        required: false
+        description: Filter books by genre (exact match)
+        schema:
+          type: string
       responses:
         '200':
-          description: Caps per_page at maximum
+          description: Returns empty array when no books match search
           content:
             application/vnd.api+json:
               schema:
@@ -1154,7 +1172,7 @@ paths:
         relationship is hidden in public view.'
       responses:
         '200':
-          description: Invitation retrieved successfully
+          description: Shows accepted invitation status
           content:
             application/vnd.api+json:
               schema:
