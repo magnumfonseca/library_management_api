@@ -6,21 +6,16 @@ RSpec.describe "Invitations API", type: :request do
   let(:librarian) { create(:user, :librarian) }
   let(:member) { create(:user, :member) }
 
-  # Helper to generate JWT token for a user
-  def jwt_token_for(user)
-    Warden::JWTAuth::UserEncoder.new.call(user, :user, nil).first
-  end
-
   describe "DELETE /api/v1/invitations/:id" do
     let!(:invitation) { create(:invitation, invited_by: librarian) }
 
     context "when authenticated as a librarian" do
-      let(:auth_headers) { { "Authorization" => "Bearer #{jwt_token_for(librarian)}" } }
+      let(:headers) { auth_headers(librarian) }
 
       context "with a pending invitation" do
         it "successfully deletes the invitation" do
           expect {
-            delete "/api/v1/invitations/#{invitation.id}", headers: auth_headers
+            delete "/api/v1/invitations/#{invitation.id}", headers: headers
           }.to change(Invitation, :count).by(-1)
 
           expect(response).to have_http_status(:no_content)
@@ -28,7 +23,7 @@ RSpec.describe "Invitations API", type: :request do
         end
 
         it "removes the invitation from the database" do
-          delete "/api/v1/invitations/#{invitation.id}", headers: auth_headers
+          delete "/api/v1/invitations/#{invitation.id}", headers: headers
 
           expect(Invitation.find_by(id: invitation.id)).to be_nil
         end
@@ -38,22 +33,21 @@ RSpec.describe "Invitations API", type: :request do
         let!(:invitation) { create(:invitation, :accepted, invited_by: librarian) }
 
         it "returns unprocessable entity status" do
-          delete "/api/v1/invitations/#{invitation.id}", headers: auth_headers
+          delete "/api/v1/invitations/#{invitation.id}", headers: headers
 
           expect(response).to have_http_status(:unprocessable_content)
         end
 
         it "returns an error message" do
-          delete "/api/v1/invitations/#{invitation.id}", headers: auth_headers
+          delete "/api/v1/invitations/#{invitation.id}", headers: headers
 
-          json = JSON.parse(response.body)
-          expect(json["errors"]).to be_present
-          expect(json["errors"].first["detail"]).to eq("Cannot cancel an accepted invitation.")
+          expect(json_response["errors"]).to be_present
+          expect(json_response["errors"].first["detail"]).to eq("Cannot cancel an accepted invitation.")
         end
 
         it "does not delete the invitation" do
           expect {
-            delete "/api/v1/invitations/#{invitation.id}", headers: auth_headers
+            delete "/api/v1/invitations/#{invitation.id}", headers: headers
           }.not_to change(Invitation, :count)
 
           expect(Invitation.find_by(id: invitation.id)).to be_present
@@ -64,22 +58,21 @@ RSpec.describe "Invitations API", type: :request do
         let!(:invitation) { create(:invitation, :expired, invited_by: librarian) }
 
         it "returns unprocessable entity status" do
-          delete "/api/v1/invitations/#{invitation.id}", headers: auth_headers
+          delete "/api/v1/invitations/#{invitation.id}", headers: headers
 
           expect(response).to have_http_status(:unprocessable_content)
         end
 
         it "returns an error message" do
-          delete "/api/v1/invitations/#{invitation.id}", headers: auth_headers
+          delete "/api/v1/invitations/#{invitation.id}", headers: headers
 
-          json = JSON.parse(response.body)
-          expect(json["errors"]).to be_present
-          expect(json["errors"].first["detail"]).to eq("Cannot cancel an expired invitation.")
+          expect(json_response["errors"]).to be_present
+          expect(json_response["errors"].first["detail"]).to eq("Cannot cancel an expired invitation.")
         end
 
         it "does not delete the invitation" do
           expect {
-            delete "/api/v1/invitations/#{invitation.id}", headers: auth_headers
+            delete "/api/v1/invitations/#{invitation.id}", headers: headers
           }.not_to change(Invitation, :count)
 
           expect(Invitation.find_by(id: invitation.id)).to be_present
@@ -88,33 +81,32 @@ RSpec.describe "Invitations API", type: :request do
 
       context "with a non-existent invitation" do
         it "returns not found status" do
-          delete "/api/v1/invitations/999999", headers: auth_headers
+          delete "/api/v1/invitations/999999", headers: headers
 
           expect(response).to have_http_status(:not_found)
         end
 
         it "returns an error message" do
-          delete "/api/v1/invitations/999999", headers: auth_headers
+          delete "/api/v1/invitations/999999", headers: headers
 
-          json = JSON.parse(response.body)
-          expect(json["errors"]).to be_present
-          expect(json["errors"].first["status"]).to eq("404")
+          expect(json_response["errors"]).to be_present
+          expect(json_response["errors"].first["status"]).to eq("404")
         end
       end
     end
 
     context "when authenticated as a member" do
-      let(:auth_headers) { { "Authorization" => "Bearer #{jwt_token_for(member)}" } }
+      let(:headers) { auth_headers(member) }
 
       it "returns forbidden status" do
-        delete "/api/v1/invitations/#{invitation.id}", headers: auth_headers
+        delete "/api/v1/invitations/#{invitation.id}", headers: headers
 
         expect(response).to have_http_status(:forbidden)
       end
 
       it "does not delete the invitation" do
         expect {
-          delete "/api/v1/invitations/#{invitation.id}", headers: auth_headers
+          delete "/api/v1/invitations/#{invitation.id}", headers: headers
         }.not_to change(Invitation, :count)
 
         expect(Invitation.find_by(id: invitation.id)).to be_present
