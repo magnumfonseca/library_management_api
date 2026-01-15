@@ -5,11 +5,14 @@ module JsonapiResponse
 
   private
 
-  def render_service_success(response, serializer:, status: :ok)
-    render json: {
-      data: serializer.new(response.data).as_jsonapi[:data],
-      meta: response.meta
-    }, status: status
+  def render_jsonapi(data, serializer:, meta: {}, params: {}, status: :ok)
+    serialized = serializer.new(data, params: params).serializable_hash
+    render json: serialized.merge(meta: meta), status: status
+  end
+
+  def render_service_success(response, serializer:, params: {}, status: :ok)
+    meta = response.meta if response.respond_to?(:meta)
+    render_jsonapi(response.data, serializer: serializer, meta: meta, params: params, status: status)
   end
 
   def render_service_failure(response)
@@ -25,5 +28,13 @@ module JsonapiResponse
         }
       end
     }, status: response.http_status
+  end
+
+  def render_collection(collection, serializer:, meta: {}, params: {})
+    render_jsonapi(collection, serializer: serializer, meta: meta, params: params, status: :ok)
+  end
+
+  def render_record(record, serializer:, meta: {}, params: {}, status: :ok)
+    render_jsonapi(record, serializer: serializer, meta: meta, params: params, status: status)
   end
 end

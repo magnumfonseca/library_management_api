@@ -1,25 +1,9 @@
+# frozen_string_literal: true
+
 class UserSerializer
-  def initialize(user)
-    @user = user
-  end
+  include JSONAPI::Serializer
 
-  def as_jsonapi
-    {
-      data: {
-        type: "users",
-        id: @user.id.to_s,
-        attributes: {
-          email: @user.email,
-          name: @user.name,
-          role: @user.role
-        }
-      }
-    }
-  end
+  set_type :users
 
-  def self.collection(users)
-    {
-      data: users.map { |user| new(user).as_jsonapi[:data] }
-    }
-  end
+  attributes :email, :name, :role
 end

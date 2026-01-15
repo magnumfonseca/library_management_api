@@ -28,6 +28,8 @@ Rails.application.routes.draw do
           post :accept
         end
       end
+
+      resources :books
     end
   end
 

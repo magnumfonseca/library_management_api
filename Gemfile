@@ -36,6 +36,9 @@ gem "devise-jwt"
 # Authorization
 gem "pundit"
 
+# JSON:API Serialization
+gem "jsonapi-serializer"
+
 group :development, :test do
   gem "dotenv-rails"
 
