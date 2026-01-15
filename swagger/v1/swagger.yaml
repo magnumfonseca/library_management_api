@@ -310,6 +310,300 @@ paths:
           description: Book not found
         '401':
           description: Unauthorized
+  "/api/v1/borrowings":
+    get:
+      summary: List borrowings
+      tags:
+      - Borrowings
+      description: Retrieve a list of borrowings. Librarians see all borrowings, members
+        see only their own.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Returns borrowing attributes correctly
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                          example: borrowings
+                        attributes:
+                          type: object
+                          properties:
+                            borrowed_at:
+                              type: string
+                              format: date-time
+                            due_date:
+                              type: string
+                              format: date-time
+                            returned_at:
+                              type: string
+                              format: date-time
+                              nullable: true
+                            status:
+                              type: string
+                              enum:
+                              - active
+                              - overdue
+                              - returned
+                            days_overdue:
+                              type: integer
+                            book_id:
+                              type: integer
+                            user_id:
+                              type: integer
+                            book_title:
+                              type: string
+                  meta:
+                    type: object
+        '401':
+          description: Unauthorized - Missing or invalid token
+    post:
+      summary: Borrow a book
+      tags:
+      - Borrowings
+      description: Create a new borrowing. Only members can borrow books. The book
+        must be available.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '201':
+          description: Creates a new borrowing record with correct due date
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        example: borrowings
+                      attributes:
+                        type: object
+                        properties:
+                          borrowed_at:
+                            type: string
+                            format: date-time
+                          due_date:
+                            type: string
+                            format: date-time
+                          returned_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                          status:
+                            type: string
+                          days_overdue:
+                            type: integer
+                          book_id:
+                            type: integer
+                          user_id:
+                            type: integer
+                          book_title:
+                            type: string
+                  meta:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+        '403':
+          description: Forbidden - Librarians cannot borrow books
+        '422':
+          description: Validation error - Member already has active borrowing for
+            this book
+        '404':
+          description: Book not found
+        '401':
+          description: Unauthorized
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                borrowing:
+                  type: object
+                  properties:
+                    book_id:
+                      type: integer
+                      description: ID of the book to borrow
+                  required:
+                  - book_id
+              required:
+              - borrowing
+  "/api/v1/borrowings/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Borrowing ID
+      schema:
+        type: string
+    get:
+      summary: Get borrowing details
+      tags:
+      - Borrowings
+      description: Retrieve detailed information about a specific borrowing. Members
+        can only view their own borrowings.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Librarian can view any borrowing
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        example: borrowings
+                      attributes:
+                        type: object
+                        properties:
+                          borrowed_at:
+                            type: string
+                            format: date-time
+                          due_date:
+                            type: string
+                            format: date-time
+                          returned_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                          status:
+                            type: string
+                          days_overdue:
+                            type: integer
+                          book_id:
+                            type: integer
+                          user_id:
+                            type: integer
+                          book_title:
+                            type: string
+                  meta:
+                    type: object
+        '403':
+          description: Forbidden - Member cannot view another user's borrowing
+        '404':
+          description: Borrowing not found
+        '401':
+          description: Unauthorized
+  "/api/v1/borrowings/{id}/return":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Borrowing ID
+      schema:
+        type: string
+    patch:
+      summary: Return a borrowed book
+      tags:
+      - Borrowings
+      description: Mark a borrowing as returned. Only librarians can perform this
+        action.
+      security:
+      - bearer_jwt: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: JWT Bearer token
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Marks borrowing as returned in database
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        example: borrowings
+                      attributes:
+                        type: object
+                        properties:
+                          borrowed_at:
+                            type: string
+                            format: date-time
+                          due_date:
+                            type: string
+                            format: date-time
+                          returned_at:
+                            type: string
+                            format: date-time
+                          status:
+                            type: string
+                            example: returned
+                          days_overdue:
+                            type: integer
+                          book_id:
+                            type: integer
+                          user_id:
+                            type: integer
+                          book_title:
+                            type: string
+                  meta:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+        '403':
+          description: Forbidden - Members cannot return books
+        '422':
+          description: Unprocessable entity - Book already returned
+        '404':
+          description: Borrowing not found
+        '401':
+          description: Unauthorized
 servers:
 - url: http://localhost:3000
   description: Development server

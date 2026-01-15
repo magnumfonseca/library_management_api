@@ -32,6 +32,12 @@ Rails.application.routes.draw do
       end
 
       resources :books
+
+      resources :borrowings, only: [ :create, :index, :show ] do
+        member do
+          patch :return
+        end
+      end
     end
   end
 
