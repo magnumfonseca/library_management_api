@@ -4,8 +4,7 @@ module Dashboard
   class LibrarianDashboardService
     DEFAULT_PER_PAGE = 10
 
-    def initialize(current_user:, page: 1, per_page: DEFAULT_PER_PAGE)
-      @current_user = current_user
+    def initialize(page: 1, per_page: DEFAULT_PER_PAGE)
       @page = page
       @per_page = per_page
     end

@@ -35,40 +35,137 @@ RSpec.describe 'Dashboard API', type: :request, openapi_spec: 'v1/swagger.yaml' 
                 required: false,
                 description: 'Items per page (default: 10 for librarian, 20 for member)'
 
-      response '200', 'Librarian dashboard data retrieved successfully' do
+      response '200', 'Dashboard data retrieved successfully based on user role and pagination parameters' do
         schema type: :object,
                properties: {
                  data: {
-                   type: :object,
-                   properties: {
-                     total_books: { type: :integer, example: 100 },
-                     total_borrowed_books: { type: :integer, example: 25 },
-                     books_due_today: { type: :integer, example: 5 },
-                     members_with_overdue: {
-                       type: :array,
-                       items: {
-                         type: :object,
-                         properties: {
-                           id: { type: :integer },
-                           name: { type: :string },
-                           email: { type: :string },
-                           overdue_count: { type: :integer }
+                   oneOf: [
+                     {
+                       title: 'Librarian Dashboard',
+                       type: :object,
+                       required: [ :total_books, :total_borrowed_books, :books_due_today, :members_with_overdue, :pagination ],
+                       properties: {
+                         total_books: { type: :integer, description: 'Total number of books in the library', example: 100 },
+                         total_borrowed_books: { type: :integer, description: 'Total number of currently borrowed books', example: 25 },
+                         books_due_today: { type: :integer, description: 'Number of books due today', example: 5 },
+                         members_with_overdue: {
+                           type: :array,
+                           description: 'Paginated list of members with overdue books',
+                           items: {
+                             type: :object,
+                             properties: {
+                               id: { type: :integer },
+                               name: { type: :string },
+                               email: { type: :string },
+                               overdue_count: { type: :integer }
+                             }
+                           }
+                         },
+                         pagination: {
+                           type: :object,
+                           properties: {
+                             current_page: { type: :integer },
+                             total_pages: { type: :integer },
+                             total_count: { type: :integer },
+                             per_page: { type: :integer, default: 10 }
+                           }
                          }
                        }
                      },
-                     pagination: {
+                     {
+                       title: 'Member Dashboard',
                        type: :object,
+                       required: [ :borrowed_books, :overdue_books, :summary, :pagination ],
                        properties: {
-                         current_page: { type: :integer },
-                         total_pages: { type: :integer },
-                         total_count: { type: :integer },
-                         per_page: { type: :integer }
+                         borrowed_books: {
+                           type: :array,
+                           description: "Paginated list of member's borrowed books",
+                           items: {
+                             type: :object,
+                             properties: {
+                               id: { type: :integer },
+                               book: {
+                                 type: :object,
+                                 properties: {
+                                   id: { type: :integer },
+                                   title: { type: :string },
+                                   author: { type: :string }
+                                 }
+                               },
+                               borrowed_at: { type: :string, format: 'date-time' },
+                               due_date: { type: :string, format: 'date-time' },
+                               days_until_due: { type: :integer },
+                               is_overdue: { type: :boolean },
+                               days_overdue: { type: :integer }
+                             }
+                           }
+                         },
+                         overdue_books: {
+                           type: :array,
+                           description: "List of member's overdue books",
+                           items: {
+                             type: :object,
+                             properties: {
+                               id: { type: :integer },
+                               book: {
+                                 type: :object,
+                                 properties: {
+                                   id: { type: :integer },
+                                   title: { type: :string },
+                                   author: { type: :string }
+                                 }
+                               },
+                               borrowed_at: { type: :string, format: 'date-time' },
+                               due_date: { type: :string, format: 'date-time' },
+                               days_overdue: { type: :integer }
+                             }
+                           }
+                         },
+                         summary: {
+                           type: :object,
+                           properties: {
+                             total_borrowed: { type: :integer, description: 'Total count of borrowed books' },
+                             total_overdue: { type: :integer, description: 'Total count of overdue books' }
+                           }
+                         },
+                         pagination: {
+                           type: :object,
+                           properties: {
+                             current_page: { type: :integer },
+                             total_pages: { type: :integer },
+                             total_count: { type: :integer },
+                             per_page: { type: :integer, default: 20 }
+                           }
+                         }
                        }
                      }
-                   }
+                   ]
                  }
                }
 
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let!(:books) { create_list(:book, 10) }
+        let!(:borrowings) { create_list(:borrowing, 5, user: member) }
+        let!(:due_today) { create(:borrowing, :due_today, user: member) }
+        let!(:overdue) { create(:borrowing, :overdue, user: member) }
+
+        run_test! do |response|
+          json = JSON.parse(response.body)
+          expect(json['data']).to have_key('total_books')
+          expect(json['data']).to have_key('total_borrowed_books')
+          expect(json['data']).to have_key('books_due_today')
+          expect(json['data']).to have_key('members_with_overdue')
+          expect(json['data']).to have_key('pagination')
+
+          expect(json['data']['total_books']).to eq(17)  # 10 standalone + 5 in borrowings + 1 due_today + 1 overdue
+          expect(json['data']['total_borrowed_books']).to eq(7)
+          expect(json['data']['books_due_today']).to eq(1)
+          expect(json['data']['members_with_overdue']).to be_an(Array)
+          expect(json['data']['pagination']).to be_a(Hash)
+        end
+      end
+
+      response '200', 'Returns members with overdue books (librarian)' do
         let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
         let!(:books) { create_list(:book, 10) }
         let!(:borrowings) { create_list(:borrowing, 5, user: member) }
@@ -125,75 +222,6 @@ RSpec.describe 'Dashboard API', type: :request, openapi_spec: 'v1/swagger.yaml' 
           expect(json['data']['pagination']['current_page']).to eq(1)
           expect(json['data']['pagination']['per_page']).to eq(2)
           expect(json['data']['pagination']['total_count']).to be > 2
-        end
-      end
-
-      response '200', 'Member dashboard data retrieved successfully' do
-        schema type: :object,
-               properties: {
-                 data: {
-                   type: :object,
-                   properties: {
-                     borrowed_books: {
-                       type: :array,
-                       items: {
-                         type: :object,
-                         properties: {
-                           id: { type: :integer },
-                           book: {
-                             type: :object,
-                             properties: {
-                               id: { type: :integer },
-                               title: { type: :string },
-                               author: { type: :string }
-                             }
-                           },
-                           borrowed_at: { type: :string, format: 'date-time' },
-                           due_date: { type: :string, format: 'date-time' },
-                           days_until_due: { type: :integer },
-                           is_overdue: { type: :boolean },
-                           days_overdue: { type: :integer }
-                         }
-                       }
-                     },
-                     overdue_books: { type: :array },
-                     summary: {
-                       type: :object,
-                       properties: {
-                         total_borrowed: { type: :integer },
-                         total_overdue: { type: :integer }
-                       }
-                     },
-                     pagination: {
-                       type: :object,
-                       properties: {
-                         current_page: { type: :integer },
-                         total_pages: { type: :integer },
-                         total_count: { type: :integer },
-                         per_page: { type: :integer }
-                       }
-                     }
-                   }
-                 }
-               }
-
-        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
-        let!(:book1) { create(:book, title: 'Active Book') }
-        let!(:book2) { create(:book, title: 'Overdue Book') }
-        let!(:active) { create(:borrowing, user: member, book: book1) }
-        let!(:overdue) { create(:borrowing, :overdue, user: member, book: book2) }
-
-        run_test! do |response|
-          json = JSON.parse(response.body)
-          expect(json['data']).to have_key('borrowed_books')
-          expect(json['data']).to have_key('overdue_books')
-          expect(json['data']).to have_key('summary')
-          expect(json['data']).to have_key('pagination')
-
-          expect(json['data']['borrowed_books'].size).to eq(2)
-          expect(json['data']['overdue_books'].size).to eq(1)
-          expect(json['data']['summary']['total_borrowed']).to eq(2)
-          expect(json['data']['summary']['total_overdue']).to eq(1)
         end
       end
 

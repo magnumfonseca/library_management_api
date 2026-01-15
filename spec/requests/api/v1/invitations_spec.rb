@@ -396,7 +396,7 @@ RSpec.describe "Invitations API", type: :request, openapi_spec: "v1/swagger.yaml
 
     get "Show invitation by token" do
       tags "Invitations"
-      description "Retrieve invitation details using a token. No authentication required. Public endpoint for invitation recipients."
+      description "Retrieve invitation details using a token. No authentication required. Public endpoint for invitation recipients. Note: Sensitive data like invited_by relationship is hidden in public view."
       produces "application/vnd.api+json"
 
       response "200", "Invitation retrieved successfully" do
@@ -461,20 +461,10 @@ RSpec.describe "Invitations API", type: :request, openapi_spec: "v1/swagger.yaml
           # Public view should not expose internal details
           expect(json_response["data"]["attributes"]).not_to have_key("created_at")
           expect(json_response["data"]["relationships"]).to eq({})
-        end
-      end
-
-      response "200", "Hides sensitive data in public view" do
-        let!(:invitation_record) { create(:invitation, email: "public@example.com", invited_by: librarian) }
-        let(:token) { invitation_record.token }
-
-        run_test! do |response|
-          # Verify public_view parameter is working correctly
-          expect(json_response["data"]["attributes"]).not_to have_key("created_at")
+          # Verify data hiding is working correctly
           expect(json_response["data"]["attributes"]).not_to have_key("token")
-          expect(json_response["data"]["relationships"]).to eq({})
           # But should still show essential info
-          expect(json_response["data"]["attributes"]["email"]).to eq("public@example.com")
+          expect(json_response["data"]["attributes"]["email"]).to be_present
           expect(json_response["data"]["attributes"]["role"]).to eq("librarian")
           expect(json_response["data"]["attributes"]["expires_at"]).to be_present
         end

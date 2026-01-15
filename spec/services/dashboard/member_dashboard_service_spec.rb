@@ -4,7 +4,6 @@ require 'rails_helper'
 
 RSpec.describe Dashboard::MemberDashboardService do
   let(:member) { create(:user, :member) }
-  let(:librarian) { create(:user, :librarian) }
 
   describe '#call' do
     context 'when user is a member' do

@@ -22,11 +22,12 @@ module Api
       private
 
       def dashboard_service
-        service_class.new(
-          current_user: current_user,
+        params_hash = {
           page: pagination_params[:page],
           per_page: pagination_params[:per_page]
-        )
+        }
+        params_hash[:current_user] = current_user if current_user.member?
+        service_class.new(**params_hash)
       end
 
       def service_class
@@ -38,10 +39,6 @@ module Api
           page: params[:page]&.to_i || 1,
           per_page: params[:per_page]&.to_i || service_class::DEFAULT_PER_PAGE
         }
-      end
-
-      def default_per_page
-        service_class::DEFAULT_PER_PAGE
       end
     end
   end

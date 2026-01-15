@@ -3,7 +3,6 @@
 require 'rails_helper'
 
 RSpec.describe Dashboard::LibrarianDashboardService do
-  let(:librarian) { create(:user, :librarian) }
   let(:member) { create(:user, :member) }
 
   describe '#call' do
@@ -14,7 +13,7 @@ RSpec.describe Dashboard::LibrarianDashboardService do
       let!(:overdue_borrowing) { create(:borrowing, :overdue, user: member) }
 
       it 'returns success with dashboard data' do
-        response = described_class.new(current_user: librarian).call
+        response = described_class.new.call
 
         expect(response).to be_success
         expect(response.data[:total_books]).to eq(10) # 5 explicit + 5 from borrowings
@@ -24,7 +23,7 @@ RSpec.describe Dashboard::LibrarianDashboardService do
       end
 
       it 'returns members with overdue books' do
-        response = described_class.new(current_user: librarian).call
+        response = described_class.new.call
 
         members_with_overdue = response.data[:members_with_overdue]
         expect(members_with_overdue.size).to eq(1)
@@ -36,14 +35,14 @@ RSpec.describe Dashboard::LibrarianDashboardService do
         member2 = create(:user, :member)
         create_list(:borrowing, 3, :overdue, user: member2)
 
-        response = described_class.new(current_user: librarian).call
+        response = described_class.new.call
 
         members = response.data[:members_with_overdue]
         expect(members.first[:overdue_count]).to be > members.last[:overdue_count]
       end
 
       it 'includes pagination metadata' do
-        response = described_class.new(current_user: librarian).call
+        response = described_class.new.call
 
         expect(response.data[:pagination]).to be_a(Hash)
         expect(response.data[:pagination]).to include(
@@ -66,7 +65,7 @@ RSpec.describe Dashboard::LibrarianDashboardService do
         end
 
         it 'respects page parameter' do
-          response = described_class.new(current_user: librarian, page: 1, per_page: 2).call
+          response = described_class.new(page: 1, per_page: 2).call
 
           expect(response.data[:members_with_overdue].size).to eq(2)
           expect(response.data[:pagination][:current_page]).to eq(1)
@@ -74,7 +73,7 @@ RSpec.describe Dashboard::LibrarianDashboardService do
         end
 
         it 'respects per_page parameter' do
-          response = described_class.new(current_user: librarian, page: 1, per_page: 1).call
+          response = described_class.new(page: 1, per_page: 1).call
 
           expect(response.data[:members_with_overdue].size).to eq(1)
           expect(response.data[:pagination][:per_page]).to eq(1)
@@ -82,8 +81,8 @@ RSpec.describe Dashboard::LibrarianDashboardService do
         end
 
         it 'returns correct page 2 data' do
-          response_page1 = described_class.new(current_user: librarian, page: 1, per_page: 2).call
-          response_page2 = described_class.new(current_user: librarian, page: 2, per_page: 2).call
+          response_page1 = described_class.new(page: 1, per_page: 2).call
+          response_page2 = described_class.new(page: 2, per_page: 2).call
 
           page1_ids = response_page1.data[:members_with_overdue].map { |m| m[:id] }
           page2_ids = response_page2.data[:members_with_overdue].map { |m| m[:id] }
@@ -97,7 +96,7 @@ RSpec.describe Dashboard::LibrarianDashboardService do
       let!(:books) { create_list(:book, 3) }
 
       it 'returns zero counts' do
-        response = described_class.new(current_user: librarian).call
+        response = described_class.new.call
 
         expect(response.data[:total_books]).to eq(3)
         expect(response.data[:total_borrowed_books]).to eq(0)
@@ -106,7 +105,7 @@ RSpec.describe Dashboard::LibrarianDashboardService do
       end
 
       it 'includes empty pagination' do
-        response = described_class.new(current_user: librarian).call
+        response = described_class.new.call
 
         expect(response.data[:pagination][:total_count]).to eq(0)
         expect(response.data[:pagination][:total_pages]).to eq(0)

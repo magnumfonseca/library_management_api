@@ -7,12 +7,8 @@ RSpec.describe DashboardPolicy do
     let(:user) { create(:user, :librarian) }
     let(:policy) { described_class.new(user, :dashboard) }
 
-    it 'permits librarian action' do
-      expect(policy.librarian?).to be true
-    end
-
-    it 'does not permit member action' do
-      expect(policy.member?).to be false
+    it 'permits show action' do
+      expect(policy.show?).to be true
     end
   end
 
@@ -20,12 +16,8 @@ RSpec.describe DashboardPolicy do
     let(:user) { create(:user, :member) }
     let(:policy) { described_class.new(user, :dashboard) }
 
-    it 'does not permit librarian action' do
-      expect(policy.librarian?).to be false
-    end
-
-    it 'permits member action' do
-      expect(policy.member?).to be true
+    it 'permits show action' do
+      expect(policy.show?).to be true
     end
   end
 
@@ -33,12 +25,8 @@ RSpec.describe DashboardPolicy do
     let(:user) { nil }
     let(:policy) { described_class.new(user, :dashboard) }
 
-    it 'does not permit librarian action' do
-      expect(policy.librarian?).to be_falsey
-    end
-
-    it 'does not permit member action' do
-      expect(policy.member?).to be_falsey
+    it 'denies show action' do
+      expect(policy.show?).to be_falsey
     end
   end
 end
