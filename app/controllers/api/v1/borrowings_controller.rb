@@ -4,12 +4,13 @@ module Api
   module V1
     class BorrowingsController < ApplicationController
       include JsonapiResponse
+      include Paginatable
 
       before_action :set_borrowing, only: [ :show, :return ]
 
       def index
-        borrowings = policy_scope(Borrowing).includes(:book, :user)
-        render_collection(borrowings, serializer: BorrowingSerializer)
+        borrowings = policy_scope(Borrowing).includes(:book, :user).order(:id)
+        render_paginated_collection(borrowings, serializer: BorrowingSerializer)
       end
 
       def show

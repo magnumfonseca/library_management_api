@@ -5,9 +5,11 @@ module JsonapiResponse
 
   private
 
-  def render_jsonapi(data, serializer:, meta: {}, params: {}, status: :ok)
+  def render_jsonapi(data, serializer:, meta: {}, links: {}, params: {}, status: :ok)
     serialized = serializer.new(data, params: params).serializable_hash
-    render json: serialized.merge(meta: meta), status: status
+    response_body = serialized.merge(meta: meta)
+    response_body[:links] = links if links.present?
+    render json: response_body, status: status
   end
 
   def render_service_success(response, serializer:, params: {}, status: :ok)
@@ -30,8 +32,21 @@ module JsonapiResponse
     }, status: response.http_status
   end
 
-  def render_collection(collection, serializer:, meta: {}, params: {})
-    render_jsonapi(collection, serializer: serializer, meta: meta, params: params, status: :ok)
+  def render_collection(collection, serializer:, meta: {}, links: {}, params: {})
+    render_jsonapi(collection, serializer: serializer, meta: meta, links: links, params: params, status: :ok)
+  end
+
+  def render_paginated_collection(collection, serializer:, params: {})
+    paginated = paginate(collection)
+    builder = pagination_builder(paginated)
+    render_jsonapi(
+      paginated,
+      serializer: serializer,
+      meta: builder.meta,
+      links: builder.links,
+      params: params,
+      status: :ok
+    )
   end
 
   def render_record(record, serializer:, meta: {}, params: {}, status: :ok)

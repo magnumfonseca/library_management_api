@@ -39,6 +39,9 @@ gem "pundit"
 # JSON:API Serialization
 gem "jsonapi-serializer"
 
+# Pagination
+gem "kaminari"
+
 group :development, :test do
   gem "dotenv-rails"
 
