@@ -23,13 +23,13 @@ module Api
         }, status: :forbidden
       end
 
-      def record_not_found
+      def record_not_found(exception)
         render json: {
           errors: [
             {
               status: "404",
               title: "Not Found",
-              detail: "Record not found"
+              detail: exception.message
             }
           ]
         }, status: :not_found
