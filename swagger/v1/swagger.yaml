@@ -1154,7 +1154,7 @@ paths:
         relationship is hidden in public view.'
       responses:
         '200':
-          description: Shows accepted invitation status
+          description: Invitation retrieved successfully
           content:
             application/vnd.api+json:
               schema:
