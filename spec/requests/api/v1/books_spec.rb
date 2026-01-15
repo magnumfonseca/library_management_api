@@ -24,6 +24,30 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
                 required: true,
                 description: "JWT Bearer token"
 
+      parameter name: :page,
+                in: :query,
+                type: :integer,
+                required: false,
+                description: "Page number (default: 1)"
+
+      parameter name: :per_page,
+                in: :query,
+                type: :integer,
+                required: false,
+                description: "Number of items per page (default: 25, max: 100)"
+
+      parameter name: "page[number]",
+                in: :query,
+                type: :integer,
+                required: false,
+                description: "Page number (JSON:API style)"
+
+      parameter name: "page[size]",
+                in: :query,
+                type: :integer,
+                required: false,
+                description: "Page size (JSON:API style)"
+
       response "200", "Books retrieved successfully" do
         schema type: :object,
                properties: {
@@ -48,7 +72,30 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
                      }
                    }
                  },
-                 meta: { type: :object }
+                 meta: {
+                   type: :object,
+                   properties: {
+                     page: {
+                       type: :object,
+                       properties: {
+                         total: { type: :integer, description: "Total number of records" },
+                         totalPages: { type: :integer, description: "Total number of pages" },
+                         number: { type: :integer, description: "Current page number" },
+                         size: { type: :integer, description: "Number of records per page" }
+                       }
+                     }
+                   }
+                 },
+                 links: {
+                   type: :object,
+                   properties: {
+                     self: { type: :string },
+                     first: { type: :string },
+                     last: { type: :string },
+                     prev: { type: :string, nullable: true },
+                     next: { type: :string, nullable: true }
+                   }
+                 }
                }
 
         let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
@@ -60,6 +107,14 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
           expect(json_response["data"].size).to eq(3)
           expect(json_response["data"].first).to have_key("type")
           expect(json_response["data"].first["type"]).to eq("books")
+          expect(json_response["meta"]["page"]).to include(
+            "total" => 3,
+            "totalPages" => 1,
+            "number" => 1,
+            "size" => 25
+          )
+          expect(json_response["links"]).to have_key("self")
+          expect(json_response["links"]).to have_key("first")
         end
       end
 
@@ -87,6 +142,77 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
         before { create_list(:book, 2) }
 
         run_test!
+      end
+
+      response "200", "Returns paginated results with default pagination" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+
+        before { create_list(:book, 30) }
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(25)
+          expect(json_response["meta"]["page"]["total"]).to eq(30)
+          expect(json_response["meta"]["page"]["totalPages"]).to eq(2)
+          expect(json_response["meta"]["page"]["number"]).to eq(1)
+          expect(json_response["meta"]["page"]["size"]).to eq(25)
+          expect(CGI.unescape(json_response["links"]["next"])).to include("page[number]=2")
+        end
+      end
+
+      response "200", "Returns correct page with page parameter" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:page) { 2 }
+        let(:per_page) { 10 }
+
+        before { create_list(:book, 25) }
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(10)
+          expect(json_response["meta"]["page"]["number"]).to eq(2)
+          expect(json_response["meta"]["page"]["total"]).to eq(25)
+          expect(CGI.unescape(json_response["links"]["prev"])).to include("page[number]=1")
+          expect(CGI.unescape(json_response["links"]["next"])).to include("page[number]=3")
+        end
+      end
+
+      response "200", "Returns correct page with JSON:API style pagination" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:"page[number]") { 2 }
+        let(:"page[size]") { 5 }
+
+        before { create_list(:book, 15) }
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(5)
+          expect(json_response["meta"]["page"]["number"]).to eq(2)
+          expect(json_response["meta"]["page"]["size"]).to eq(5)
+        end
+      end
+
+      response "200", "Returns empty array for page beyond range" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:page) { 999 }
+
+        before { create_list(:book, 5) }
+
+        run_test! do |response|
+          expect(json_response["data"]).to eq([])
+          expect(json_response["meta"]["page"]["total"]).to eq(5)
+          expect(json_response["meta"]["page"]["number"]).to eq(999)
+          expect(json_response["links"]["next"]).to be_nil
+        end
+      end
+
+      response "200", "Caps per_page at maximum" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:per_page) { 500 }
+
+        before { create_list(:book, 150) }
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(100)
+          expect(json_response["meta"]["page"]["size"]).to eq(100)
+        end
       end
 
       response "401", "Unauthorized - Missing or invalid token" do

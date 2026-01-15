@@ -4,12 +4,13 @@ module Api
   module V1
     class BooksController < ApplicationController
       include JsonapiResponse
+      include Paginatable
 
       before_action :set_book, only: [ :show, :update, :destroy ]
 
       def index
-        books = policy_scope(Book)
-        render_collection(books, serializer: BookSerializer)
+        books = policy_scope(Book).order(:id)
+        render_paginated_collection(books, serializer: BookSerializer)
       end
 
       def show
