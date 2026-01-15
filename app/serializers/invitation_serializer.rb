@@ -9,5 +9,17 @@ class InvitationSerializer
 
   attribute :token, if: proc { |_record, params| params && params[:include_token] }
 
-  belongs_to :invited_by, serializer: UserSerializer
+  attribute :status do |invitation|
+    if invitation.accepted?
+      "accepted"
+    elsif invitation.expired?
+      "expired"
+    else
+      "pending"
+    end
+  end
+
+  attribute :created_at, if: proc { |_record, params| !params || !params[:public_view] }
+
+  belongs_to :invited_by, serializer: UserSerializer, if: proc { |_record, params| !params || !params[:public_view] }
 end
