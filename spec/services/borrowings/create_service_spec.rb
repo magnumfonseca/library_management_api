@@ -143,7 +143,7 @@ RSpec.describe Borrowings::CreateService do
         responses = []
         threads = []
 
-        [member1, member2].each do |m|
+        [ member1, member2 ].each do |m|
           threads << Thread.new do
             ActiveRecord::Base.connection_pool.with_connection do
               responses << described_class.new(book_id: book.id, current_user: m).call
