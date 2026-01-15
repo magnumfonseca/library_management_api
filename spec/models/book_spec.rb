@@ -15,6 +15,27 @@ RSpec.describe Book, type: :model do
   end
 
   describe "scopes" do
+    describe ".by_title" do
+      it "returns books with titles containing the search term (case-insensitive)" do
+        ruby_book = create(:book, title: "Learning Ruby")
+        rails_book = create(:book, title: "Ruby on Rails Guide")
+        python_book = create(:book, title: "Python Basics")
+
+        result = Book.by_title("ruby")
+        expect(result).to include(ruby_book)
+        expect(result).to include(rails_book)
+        expect(result).not_to include(python_book)
+      end
+
+      it "returns partial matches" do
+        book = create(:book, title: "The Great Gatsby")
+
+        expect(Book.by_title("Great")).to include(book)
+        expect(Book.by_title("Gatsby")).to include(book)
+        expect(Book.by_title("at Gat")).to include(book)
+      end
+    end
+
     describe ".by_genre" do
       it "returns books of the specified genre" do
         fantasy_book = create(:book, genre: "Fantasy")

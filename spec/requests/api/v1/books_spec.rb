@@ -48,6 +48,24 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
                 required: false,
                 description: "Page size (JSON:API style)"
 
+      parameter name: :title,
+                in: :query,
+                type: :string,
+                required: false,
+                description: "Filter books by title (case-insensitive partial match)"
+
+      parameter name: :author,
+                in: :query,
+                type: :string,
+                required: false,
+                description: "Filter books by author (case-insensitive partial match)"
+
+      parameter name: :genre,
+                in: :query,
+                type: :string,
+                required: false,
+                description: "Filter books by genre (exact match)"
+
       response "200", "Books retrieved successfully" do
         schema type: :object,
                properties: {
@@ -212,6 +230,90 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
         run_test! do |response|
           expect(json_response["data"].size).to eq(100)
           expect(json_response["meta"]["page"]["size"]).to eq(100)
+        end
+      end
+
+      response "200", "Filters books by title" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:title) { "Ruby" }
+
+        before do
+          create(:book, title: "Learning Ruby", author: "John Doe", genre: "Programming")
+          create(:book, title: "Ruby on Rails Guide", author: "Jane Smith", genre: "Programming")
+          create(:book, title: "Python Basics", author: "Bob Wilson", genre: "Programming")
+        end
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(2)
+          titles = json_response["data"].map { |b| b["attributes"]["title"] }
+          expect(titles).to all(include("Ruby"))
+        end
+      end
+
+      response "200", "Filters books by author" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:author) { "Smith" }
+
+        before do
+          create(:book, title: "Book One", author: "John Smith", genre: "Fiction")
+          create(:book, title: "Book Two", author: "Jane Smith", genre: "Fiction")
+          create(:book, title: "Book Three", author: "Bob Wilson", genre: "Fiction")
+        end
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(2)
+          authors = json_response["data"].map { |b| b["attributes"]["author"] }
+          expect(authors).to all(include("Smith"))
+        end
+      end
+
+      response "200", "Filters books by genre" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:genre) { "Science Fiction" }
+
+        before do
+          create(:book, title: "Dune", author: "Frank Herbert", genre: "Science Fiction")
+          create(:book, title: "Foundation", author: "Isaac Asimov", genre: "Science Fiction")
+          create(:book, title: "Pride and Prejudice", author: "Jane Austen", genre: "Romance")
+        end
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(2)
+          genres = json_response["data"].map { |b| b["attributes"]["genre"] }
+          expect(genres).to all(eq("Science Fiction"))
+        end
+      end
+
+      response "200", "Combines multiple search filters" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:author) { "Herbert" }
+        let(:genre) { "Science Fiction" }
+
+        before do
+          create(:book, title: "Dune", author: "Frank Herbert", genre: "Science Fiction")
+          create(:book, title: "Dune Messiah", author: "Frank Herbert", genre: "Science Fiction")
+          create(:book, title: "The White Plague", author: "Frank Herbert", genre: "Thriller")
+          create(:book, title: "Foundation", author: "Isaac Asimov", genre: "Science Fiction")
+        end
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(2)
+          json_response["data"].each do |book|
+            expect(book["attributes"]["author"]).to include("Herbert")
+            expect(book["attributes"]["genre"]).to eq("Science Fiction")
+          end
+        end
+      end
+
+      response "200", "Returns empty array when no books match search" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:title) { "Nonexistent Book Title" }
+
+        before { create_list(:book, 3) }
+
+        run_test! do |response|
+          expect(json_response["data"]).to eq([])
+          expect(json_response["meta"]["page"]["total"]).to eq(0)
         end
       end
 

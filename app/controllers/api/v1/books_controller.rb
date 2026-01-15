@@ -9,8 +9,11 @@ module Api
       before_action :set_book, only: [ :show, :update, :destroy ]
 
       def index
-        books = policy_scope(Book).order(:id)
-        render_paginated_collection(books, serializer: BookSerializer)
+        books = policy_scope(Book)
+        books = books.by_title(params[:title]) if params[:title].present?
+        books = books.by_author(params[:author]) if params[:author].present?
+        books = books.by_genre(params[:genre]) if params[:genre].present?
+        render_paginated_collection(books.order(:id), serializer: BookSerializer)
       end
 
       def show

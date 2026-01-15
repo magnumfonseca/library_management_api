@@ -10,8 +10,9 @@ class Book < ApplicationRecord
   validates :total_copies, numericality: { greater_than: 0 }
 
   # Scopes
+  scope :by_title, ->(title) { where("title ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(title)}%") }
   scope :by_genre, ->(genre) { where(genre: genre) }
-  scope :by_author, ->(author) { where("author ILIKE ?", "%#{author}%") }
+  scope :by_author, ->(author) { where("author ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(author)}%") }
   scope :available, -> {
     where("total_copies > ?", 0)
       .joins("LEFT JOIN borrowings ON books.id = borrowings.book_id AND borrowings.returned_at IS NULL")
