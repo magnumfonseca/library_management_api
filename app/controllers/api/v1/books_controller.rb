@@ -24,7 +24,7 @@ module Api
         authorize @book
 
         # Preload borrowings for members to avoid N+1 queries
-        @book.association(:borrowings).load if current_user&.member?
+        @book = Book.includes(:borrowings).find(@book.id) if current_user&.member?
 
         render_record(@book, serializer: BookSerializer, params: { current_user: current_user })
       end
