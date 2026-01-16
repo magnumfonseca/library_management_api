@@ -84,7 +84,8 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
                            genre: { type: :string },
                            isbn: { type: :string },
                            total_copies: { type: :integer },
-                           available_copies: { type: :integer }
+                           available_copies: { type: :integer },
+                           borrowed_by_current_user: { type: :boolean }
                          }
                        }
                      }
@@ -151,6 +152,21 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
           expect(book_data["attributes"]["isbn"]).to eq("1234567890")
           expect(book_data["attributes"]["total_copies"]).to eq(5)
           expect(book_data["attributes"]["available_copies"]).to eq(5)
+          expect(book_data["attributes"]["borrowed_by_current_user"]).to eq(false)
+        end
+      end
+
+      response "200", "Shows borrowed_by_current_user as true when user borrowed the book" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let!(:book) { create(:book) }
+
+        before do
+          create(:borrowing, book: book, user: member)
+        end
+
+        run_test! do |response|
+          book_data = json_response["data"].first
+          expect(book_data["attributes"]["borrowed_by_current_user"]).to eq(true)
         end
       end
 
@@ -383,7 +399,8 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
                          genre: { type: :string },
                          isbn: { type: :string },
                          total_copies: { type: :integer },
-                         available_copies: { type: :integer }
+                         available_copies: { type: :integer },
+                         borrowed_by_current_user: { type: :boolean }
                        }
                      }
                    }
@@ -408,6 +425,7 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
           expect(json_response["data"]["attributes"]["isbn"]).to eq("9781234567890")
           expect(json_response["data"]["attributes"]["total_copies"]).to eq(5)
           expect(json_response["data"]["attributes"]["available_copies"]).to eq(5)
+          expect(json_response["data"]["attributes"]["borrowed_by_current_user"]).to eq(false)
           expect(json_response["meta"]["message"]).to eq("Book created successfully.")
         end
       end
@@ -501,7 +519,8 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
                          genre: { type: :string },
                          isbn: { type: :string },
                          total_copies: { type: :integer },
-                         available_copies: { type: :integer }
+                         available_copies: { type: :integer },
+                         borrowed_by_current_user: { type: :boolean }
                        }
                      }
                    }
@@ -529,6 +548,26 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
 
         run_test! do |response|
           expect(json_response["data"]["attributes"]["available_copies"]).to eq(book.available_copies)
+        end
+      end
+
+      response "200", "Shows borrowed_by_current_user as true when user borrowed the book" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:id) { book.id }
+
+        before { create(:borrowing, book: book, user: member) }
+
+        run_test! do |response|
+          expect(json_response["data"]["attributes"]["borrowed_by_current_user"]).to eq(true)
+        end
+      end
+
+      response "200", "Shows borrowed_by_current_user as false when user has not borrowed the book" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:id) { book.id }
+
+        run_test! do |response|
+          expect(json_response["data"]["attributes"]["borrowed_by_current_user"]).to eq(false)
         end
       end
 
@@ -597,7 +636,8 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
                          genre: { type: :string },
                          isbn: { type: :string },
                          total_copies: { type: :integer },
-                         available_copies: { type: :integer }
+                         available_copies: { type: :integer },
+                         borrowed_by_current_user: { type: :boolean }
                        }
                      }
                    }
