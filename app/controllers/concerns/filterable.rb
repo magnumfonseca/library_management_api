@@ -16,9 +16,13 @@ module Filterable
   end
 
   def apply_scope_filter(scope, param_key, valid_scopes)
-    return scope unless params[param_key].present?
-    return scope unless valid_scopes.include?(params[param_key])
+    param_value = params[param_key]
+    return scope unless param_value.present?
 
-    scope.public_send(params[param_key])
+    # Only use whitelisted scope names - prevents arbitrary method execution
+    validated_scope = valid_scopes.find { |s| s == param_value.to_s }
+    return scope unless validated_scope
+
+    scope.public_send(validated_scope)
   end
 end
