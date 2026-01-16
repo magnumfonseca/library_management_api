@@ -5,12 +5,14 @@ module Api
     class BorrowingsController < ApplicationController
       include JsonapiResponse
       include Paginatable
+      include Filterable
 
       before_action :set_borrowing, only: [ :show, :return ]
 
       def index
-        borrowings = policy_scope(Borrowing).includes(:book, :user).order(:id)
-        render_paginated_collection(borrowings, serializer: BorrowingSerializer)
+        borrowings = policy_scope(Borrowing).includes(:book, :user)
+        borrowings = apply_scope_filter(borrowings, :status, %w[active returned overdue])
+        render_paginated_collection(borrowings.order(:id), serializer: BorrowingSerializer)
       end
 
       def show

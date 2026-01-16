@@ -47,6 +47,16 @@ RSpec.describe "Borrowings API", type: :request, openapi_spec: "v1/swagger.yaml"
                 required: false,
                 description: "Page size (JSON:API style)"
 
+      parameter name: :status,
+                in: :query,
+                type: :string,
+                required: false,
+                description: "Filter borrowings by status",
+                schema: {
+                  type: :string,
+                  enum: %w[active returned overdue]
+                }
+
       response "200", "Borrowings retrieved successfully" do
         schema type: :object,
                properties: {
@@ -189,6 +199,70 @@ RSpec.describe "Borrowings API", type: :request, openapi_spec: "v1/swagger.yaml"
           expect(json_response["data"].size).to eq(3)
           expect(json_response["meta"]["page"]["number"]).to eq(2)
           expect(CGI.unescape(json_response["links"]["prev"])).to include("page[number]=1")
+        end
+      end
+
+      response "200", "Filters by active status" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:status) { "active" }
+
+        before do
+          create_list(:borrowing, 3)
+          returned = create(:borrowing)
+          returned.mark_as_returned!
+        end
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(3)
+          json_response["data"].each do |borrowing|
+            expect(borrowing["attributes"]["status"]).to eq("active")
+          end
+        end
+      end
+
+      response "200", "Filters by returned status" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:status) { "returned" }
+
+        before do
+          create_list(:borrowing, 2)
+          returned = create(:borrowing)
+          returned.mark_as_returned!
+        end
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(1)
+          expect(json_response["data"].first["attributes"]["status"]).to eq("returned")
+        end
+      end
+
+      response "200", "Filters by overdue status" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:status) { "overdue" }
+
+        before do
+          create(:borrowing) # Active, not overdue
+          create(:borrowing, due_date: 2.days.ago) # Overdue
+          create(:borrowing, due_date: 5.days.ago) # Overdue
+        end
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(2)
+          json_response["data"].each do |borrowing|
+            expect(borrowing["attributes"]["status"]).to eq("overdue")
+            expect(borrowing["attributes"]["days_overdue"]).to be > 0
+          end
+        end
+      end
+
+      response "200", "Ignores invalid status filter" do
+        let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
+        let(:status) { "invalid_status" }
+
+        before { create_list(:borrowing, 3) }
+
+        run_test! do |response|
+          expect(json_response["data"].size).to eq(3) # Returns all borrowings
         end
       end
 
