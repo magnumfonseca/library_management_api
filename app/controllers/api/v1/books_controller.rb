@@ -5,28 +5,21 @@ module Api
     class BooksController < ApplicationController
       include JsonapiResponse
       include Paginatable
+      include Filterable
 
       before_action :set_book, only: [ :show, :update, :destroy ]
 
       def index
         books = policy_scope(Book)
-        books = books.by_title(params[:title]) if params[:title].present?
-        books = books.by_author(params[:author]) if params[:author].present?
-        books = books.by_genre(params[:genre]) if params[:genre].present?
-
-        # Preload borrowings for members to avoid N+1 queries
-        books = books.includes(:borrowings) if current_user&.member?
-
-        render_paginated_collection(books.order(:id), serializer: BookSerializer, params: { current_user: current_user })
+        books = apply_filters(books, %i[title author genre])
+        books = preload_for_serialization(books)
+        render_paginated_collection(books.order(:id), serializer: BookSerializer, params: serializer_params)
       end
 
       def show
         authorize @book
-
-        # Preload borrowings for members to avoid N+1 queries
-        @book = Book.includes(:borrowings).find(@book.id) if current_user&.member?
-
-        render_record(@book, serializer: BookSerializer, params: { current_user: current_user })
+        @book = preload_for_serialization(Book.where(id: @book.id)).first
+        render_record(@book, serializer: BookSerializer, params: serializer_params)
       end
 
       def create
@@ -80,6 +73,15 @@ module Api
 
       def book_params
         params.require(:book).permit(:title, :author, :genre, :isbn, :total_copies)
+      end
+
+      def serializer_params
+        { current_user: current_user }
+      end
+
+      def preload_for_serialization(scope)
+        # Only preload borrowings for members who need to see borrowed_by_current_user
+        current_user&.member? ? scope.includes(:borrowings) : scope
       end
     end
   end

@@ -249,7 +249,7 @@ paths:
           type: string
       responses:
         '200':
-          description: Shows borrowed_by_current_user as false when user has not borrowed
+          description: Shows borrowed_by_current_user as false when user returned
             the book
           content:
             application/vnd.api+json:
@@ -432,9 +432,20 @@ paths:
         description: Page size (JSON:API style)
         schema:
           type: integer
+      - name: status
+        in: query
+        type: string
+        required: false
+        description: Filter borrowings by status
+        schema:
+          type: string
+          enum:
+          - active
+          - returned
+          - overdue
       responses:
         '200':
-          description: Pagination with JSON:API style params
+          description: Ignores invalid status filter
           content:
             application/vnd.api+json:
               schema:
