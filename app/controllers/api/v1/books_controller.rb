@@ -13,12 +13,20 @@ module Api
         books = books.by_title(params[:title]) if params[:title].present?
         books = books.by_author(params[:author]) if params[:author].present?
         books = books.by_genre(params[:genre]) if params[:genre].present?
-        render_paginated_collection(books.order(:id), serializer: BookSerializer)
+
+        # Preload borrowings for members to avoid N+1 queries
+        books = books.includes(:borrowings) if current_user&.member?
+
+        render_paginated_collection(books.order(:id), serializer: BookSerializer, params: { current_user: current_user })
       end
 
       def show
         authorize @book
-        render_record(@book, serializer: BookSerializer)
+
+        # Preload borrowings for members to avoid N+1 queries
+        @book = Book.includes(:borrowings).find(@book.id) if current_user&.member?
+
+        render_record(@book, serializer: BookSerializer, params: { current_user: current_user })
       end
 
       def create
@@ -29,7 +37,7 @@ module Api
         ).call
 
         if response.success?
-          render_service_success(response, serializer: BookSerializer, status: :created)
+          render_service_success(response, serializer: BookSerializer, params: { current_user: current_user }, status: :created)
         else
           render_service_failure(response)
         end
@@ -44,7 +52,7 @@ module Api
         ).call
 
         if response.success?
-          render_service_success(response, serializer: BookSerializer)
+          render_service_success(response, serializer: BookSerializer, params: { current_user: current_user })
         else
           render_service_failure(response)
         end

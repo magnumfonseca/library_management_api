@@ -99,6 +99,8 @@ paths:
                               type: integer
                             available_copies:
                               type: integer
+                            borrowed_by_current_user:
+                              type: boolean
                   meta:
                     type: object
                     properties:
@@ -179,6 +181,8 @@ paths:
                             type: integer
                           available_copies:
                             type: integer
+                          borrowed_by_current_user:
+                            type: boolean
                   meta:
                     type: object
                     properties:
@@ -245,7 +249,8 @@ paths:
           type: string
       responses:
         '200':
-          description: Returns available_copies correctly with borrowings
+          description: Shows borrowed_by_current_user as false when user has not borrowed
+            the book
           content:
             application/vnd.api+json:
               schema:
@@ -274,6 +279,8 @@ paths:
                             type: integer
                           available_copies:
                             type: integer
+                          borrowed_by_current_user:
+                            type: boolean
                   meta:
                     type: object
         '404':
@@ -325,6 +332,8 @@ paths:
                             type: integer
                           available_copies:
                             type: integer
+                          borrowed_by_current_user:
+                            type: boolean
                   meta:
                     type: object
                     properties:
