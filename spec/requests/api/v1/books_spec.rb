@@ -170,6 +170,21 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
         end
       end
 
+      response "200", "Shows borrowed_by_current_user as false when user returned the book" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let!(:book) { create(:book) }
+
+        before do
+          borrowing = create(:borrowing, book: book, user: member)
+          borrowing.mark_as_returned!
+        end
+
+        run_test! do |response|
+          book_data = json_response["data"].first
+          expect(book_data["attributes"]["borrowed_by_current_user"]).to eq(false)
+        end
+      end
+
       response "200", "Allows librarians to list books" do
         let(:Authorization) { "Bearer #{jwt_token_for(librarian)}" }
 
@@ -565,6 +580,20 @@ RSpec.describe "Books API", type: :request, openapi_spec: "v1/swagger.yaml" do
       response "200", "Shows borrowed_by_current_user as false when user has not borrowed the book" do
         let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
         let(:id) { book.id }
+
+        run_test! do |response|
+          expect(json_response["data"]["attributes"]["borrowed_by_current_user"]).to eq(false)
+        end
+      end
+
+      response "200", "Shows borrowed_by_current_user as false when user returned the book" do
+        let(:Authorization) { "Bearer #{jwt_token_for(member)}" }
+        let(:id) { book.id }
+
+        before do
+          borrowing = create(:borrowing, book: book, user: member)
+          borrowing.mark_as_returned!
+        end
 
         run_test! do |response|
           expect(json_response["data"]["attributes"]["borrowed_by_current_user"]).to eq(false)
