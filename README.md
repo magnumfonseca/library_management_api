@@ -141,7 +141,7 @@ docker-compose up --build web
 - **Database**: PostgreSQL 15
 - **Authentication**: Devise with JWT
 - **Authorization**: Pundit
-- **Serialization**: Active Model Serializers
+- **Serialization**: jsonapi-serializer (JSON:API compliant)
 - **API Documentation**: RSwag (Swagger/OpenAPI)
 - **Testing**: RSpec, FactoryBot
 
@@ -182,24 +182,50 @@ docker-compose exec web rspec spec/models/user_spec.rb:10
 ## API Endpoints
 
 ### Authentication
-- `POST /api/v1/auth/register` - Register new user
-- `POST /api/v1/auth/login` - Login
-- `DELETE /api/v1/auth/logout` - Logout
+- `POST /api/v1/signup` - Register new user
+- `POST /api/v1/login` - Login (returns JWT token)
+- `DELETE /api/v1/logout` - Logout (revokes token)
 
 ### Books
-- `GET /api/v1/books` - List all books
+- `GET /api/v1/books` - List all books (supports filtering and pagination)
 - `GET /api/v1/books/:id` - Get book details
 - `POST /api/v1/books` - Create book (librarian only)
 - `PUT /api/v1/books/:id` - Update book (librarian only)
 - `DELETE /api/v1/books/:id` - Delete book (librarian only)
 
+**Filtering options:**
+- `?title=<search>` - Filter by title (case-insensitive partial match)
+- `?author=<search>` - Filter by author (case-insensitive partial match)
+- `?genre=<genre>` - Filter by genre (exact match)
+
 ### Borrowings
-- `GET /api/v1/borrowings` - List borrowings
-- `POST /api/v1/borrowings` - Borrow a book
-- `PUT /api/v1/borrowings/:id/return` - Return a book
+- `GET /api/v1/borrowings` - List borrowings (supports status filtering)
+- `POST /api/v1/borrowings` - Borrow a book (member only)
+- `PATCH /api/v1/borrowings/:id/return` - Return a book (librarian only)
+
+**Filtering options:**
+- `?status=active` - Show only active borrowings
+- `?status=returned` - Show only returned borrowings
+- `?status=overdue` - Show only overdue borrowings
+
+### Invitations (Librarian only)
+- `GET /api/v1/invitations` - List all invitations
+- `GET /api/v1/invitations/:id` - Get invitation details
+- `POST /api/v1/invitations` - Create invitation
+- `DELETE /api/v1/invitations/:id` - Cancel pending invitation
+- `GET /api/v1/invitations/token/:token` - Validate invitation token (public)
+- `PATCH /api/v1/invitations/token/:token/accept` - Accept invitation (public)
 
 ### Dashboard
-- `GET /api/v1/dashboard` - Get dashboard statistics
+- `GET /api/v1/dashboard` - Get role-specific dashboard statistics
+
+### Pagination
+
+All list endpoints support pagination:
+- `?page=1&per_page=25` - Standard pagination
+- `?page[number]=1&page[size]=25` - JSON:API style pagination
+
+Response includes pagination metadata in `meta.page` with total counts and page info.
 
 For complete API documentation, visit http://localhost:3000/api-docs after starting the application.
 
